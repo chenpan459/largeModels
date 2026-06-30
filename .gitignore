@@ -1,0 +1,31 @@
+# 构建产物
+**/build/
+**/build-*/
+**/dist/
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/node_modules/
+**/.venv/
+**/venv/
+
+# 模型权重（体积过大，不提交）
+models/**/*.gguf
+models/**/*.bin
+models/**/*.safetensors
+models/**/*.pt
+models/**/*.pth
+
+# IDE / 系统
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# 编译中间文件
+**/*.o
+**/*.a
+**/*.so
+**/*.dylib
