@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>智能客服 - 知识库问答</title>
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --panel: #fff;
+      --primary: #1677ff;
+      --text: #1f1f1f;
+      --muted: #8c8c8c;
+      --border: #e8e8e8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 { font-size: 18px; font-weight: 600; }
+    #status { font-size: 13px; color: var(--muted); }
+    main {
+      flex: 1;
+      max-width: 860px;
+      width: 100%;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      padding: 16px;
+      overflow: hidden;
+    }
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding-bottom: 16px;
+    }
+    .msg {
+      max-width: 85%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      line-height: 1.6;
+      font-size: 14px;
+      white-space: pre-wrap;
+    }
+    .msg.user {
+      align-self: flex-end;
+      background: var(--primary);
+      color: #fff;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.bot {
+      align-self: flex-start;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-bottom-left-radius: 4px;
+    }
+    .sources {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px dashed var(--border);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .sources summary { cursor: pointer; color: var(--primary); }
+    .input-area {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      gap: 8px;
+    }
+    textarea {
+      flex: 1;
+      border: none;
+      resize: none;
+      font-size: 14px;
+      outline: none;
+      min-height: 44px;
+      max-height: 120px;
+      font-family: inherit;
+    }
+    button {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0 20px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .welcome {
+      text-align: center;
+      color: var(--muted);
+      margin-top: 40px;
+      font-size: 14px;
+    }
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 16px;
+    }
+    .chip {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 6px 14px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .chip:hover { border-color: var(--primary); color: var(--primary); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>云购商城 · 智能客服</h1>
+    <span id="status">检查服务中...</span>
+  </header>
+  <main>
+    <div id="chat">
+      <div class="welcome">
+        <p>您好，我是智能客服，可回答配送、退换货、会员等问题。</p>
+        <div class="chips">
+          <span class="chip" data-q="退货流程是什么？">退货流程</span>
+          <span class="chip" data-q="会员有什么权益？">会员权益</span>
+          <span class="chip" data-q="运费怎么算？">运费说明</span>
+          <span class="chip" data-q="退款多久到账？">退款时效</span>
+        </div>
+      </div>
+    </div>
+    <div class="input-area">
+      <textarea id="input" placeholder="请输入您的问题..." rows="1"></textarea>
+      <button id="send">发送</button>
+    </div>
+  </main>
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('input');
+    const sendBtn = document.getElementById('send');
+    const statusEl = document.getElementById('status');
+
+    async function checkHealth() {
+      try {
+        const r = await fetch('/api/health');
+        const d = await r.json();
+        const ok = d.qdrant && d.llama;
+        statusEl.textContent = ok
+          ? `知识库 ${d.points_count} 条 · 服务正常`
+          : `服务异常 (Qdrant:${d.qdrant} LLM:${d.llama})`;
+        statusEl.style.color = ok ? '#52c41a' : '#ff4d4f';
+      } catch {
+        statusEl.textContent = '无法连接后端';
+        statusEl.style.color = '#ff4d4f';
+      }
+    }
+
+    function appendMsg(text, role, sources) {
+      const welcome = chat.querySelector('.welcome');
+      if (welcome) welcome.remove();
+
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = text;
+
+      if (sources && sources.length) {
+        const src = document.createElement('details');
+        src.className = 'sources';
+        src.innerHTML = '<summary>参考来源 (' + sources.length + ')</summary>';
+        sources.forEach((s, i) => {
+          const p = document.createElement('p');
+          p.textContent = (i + 1) + '. [' + s.title + '] ' + s.text.slice(0, 120) + '...';
+          src.appendChild(p);
+        });
+        div.appendChild(src);
+      }
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function ask(question) {
+      if (!question.trim()) return;
+      appendMsg(question, 'user');
+      input.value = '';
+      sendBtn.disabled = true;
+
+      try {
+        const r = await fetch('/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question }),
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || '请求失败');
+        appendMsg(d.answer, 'bot', d.sources);
+      } catch (e) {
+        appendMsg('抱歉，服务暂时不可用：' + e.message, 'bot');
+      } finally {
+        sendBtn.disabled = false;
+        input.focus();
+      }
+    }
+
+    sendBtn.onclick = () => ask(input.value);
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        ask(input.value);
+      }
+    };
+
+    document.querySelectorAll('.chip').forEach(el => {
+      el.onclick = () => ask(el.dataset.q);
+    });
+
+    checkHealth();
+    setInterval(checkHealth, 30000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,29 @@
+# 客服知识库配置
+
+llama:
+  base_url: "http://127.0.0.1:8080"
+  api_key: "no-key"
+  chat_model: "default"
+  embed_model: "default"
+  rerank_model: "default"
+  timeout: 120
+
+qdrant:
+  host: "127.0.0.1"
+  port: 6333
+  collection: "kefu_kb"
+
+rag:
+  chunk_size: 400
+  chunk_overlap: 80
+  top_k: 8
+  top_n: 3
+  use_rerank: true
+  score_threshold: 0.35
+
+paths:
+  docs_dir: "data/docs"
+
+server:
+  host: "0.0.0.0"
+  port: 8000

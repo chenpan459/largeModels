@@ -25,6 +25,8 @@ largeModels/
 ├── 06-Research/          # 前沿技术、大规模训练
 │   ├── beyond-nanogpt/
 │   └── Megatron-LM/
+├── 07-业务应用/          # 业务落地项目
+│   └── kefu-kb/          # 客服知识库 RAG
 ├── models/               # 本地模型权重 (GGUF 等)
 ├── sync-repos.sh         # 一键同步/克隆脚本
 └── README.md
@@ -40,6 +42,11 @@ largeModels/
 | **04-量化内核** | 量化格式、SIMD/CUDA kernel | `ggml/src/ggml-quants.c` |
 | **05-RAG** | 向量检索、知识库编排 | `llama_index/docs` |
 | **06-Research** | MoE、RL、分布式预训练 | `beyond-nanogpt/` |
+| **07-业务应用** | 客服、知识库等业务 MVP | `kefu-kb/` |
+
+## 业务应用快速入口
+
+客服知识库项目：`07-业务应用/kefu-kb/README.md`
 
 ## 推荐阅读顺序
 
