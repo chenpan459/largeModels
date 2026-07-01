@@ -17,14 +17,19 @@ largeModels/
 ├── 03-推理部署/          # 本地推理、HTTP 服务、高吞吐 serving
 │   ├── llama.cpp/        # 含 llama-server (tools/server/)
 │   ├── llama.cppDoc/     # llama.cpp 中文源码分析文档
-│   └── vllm/
+│   ├── vllm/
+│   └── vllmDoc/          # vLLM 中文源码分析
 ├── 04-量化内核/          # 张量计算、量化 kernel
-│   └── ggml/
+│   ├── ggml/
+│   └── ggmlDoc/          # GGML 中文源码分析
 ├── 05-RAG/               # 检索增强生成、知识库
-│   └── llama_index/
+│   ├── llama_index/
+│   └── llama_indexDoc/   # LlamaIndex 中文源码分析
 ├── 06-Research/          # 前沿技术、大规模训练
 │   ├── beyond-nanogpt/
-│   └── Megatron-LM/
+│   ├── beyond-nanogptDoc/  # Beyond-NanoGPT 中文源码分析
+│   ├── Megatron-LM/
+│   └── Megatron-LMDoc/     # Megatron-LM 中文源码分析
 ├── 07-业务应用/          # 业务落地项目
 │   └── kefu-kb/          # 客服知识库 RAG
 ├── models/               # 本地模型权重 (GGUF 等)
@@ -38,10 +43,10 @@ largeModels/
 |------|--------|----------|
 | **01-模型原理** | Attention、Transformer、GPT 结构 | `nanoGPT/train.py` |
 | **02-训练** | 训练循环、微调、LoRA/DPO | `how-to-train-your-gpt/` |
-| **03-推理部署** | GGUF 加载、decode、HTTP API | `llama.cppDoc/` + `llama-server` |
-| **04-量化内核** | 量化格式、SIMD/CUDA kernel | `ggml/src/ggml-quants.c` |
-| **05-RAG** | 向量检索、知识库编排 | `llama_index/docs` |
-| **06-Research** | MoE、RL、分布式预训练 | `beyond-nanogpt/` |
+| **03-推理部署** | GGUF / PagedAttention、HTTP API | `llama.cppDoc/` + `vllmDoc/` |
+| **04-量化内核** | 量化格式、SIMD/CUDA kernel | `ggmlDoc/` + `ggml/src/ggml-quants.c` |
+| **05-RAG** | 向量检索、知识库编排 | `llama_indexDoc/` + `llama_index/` |
+| **06-Research** | MoE、RL、分布式预训练 | `beyond-nanogptDoc/` → `Megatron-LMDoc/` |
 | **07-业务应用** | 客服、知识库等业务 MVP | `kefu-kb/` |
 
 ## 业务应用快速入口

@@ -7,7 +7,8 @@
 | [llama.cpp](llama.cpp/) | C/C++ 推理框架，量化、多后端 | `include/llama.h`, `tools/server/` |
 | [llama.cppDoc](llama.cppDoc/) | llama.cpp 中文源码分析 | `README.md` 文档索引 |
 | [vllm](vllm/) | PagedAttention，生产级 serving | `vllm/entrypoints/` |
+| [vllmDoc](vllmDoc/) | vLLM 中文源码分析（12 篇） | [README](vllmDoc/README.md) |
 
 **llama-server** 位于 `llama.cpp/tools/server/`，提供 OpenAI 兼容 API。
 
-**学习顺序**: llama.cppDoc -> llama.cpp 源码 -> vllm 对照
+**学习顺序**: llama.cppDoc -> llama.cpp 源码 -> [vllmDoc](vllmDoc/README.md)
