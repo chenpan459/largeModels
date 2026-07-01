@@ -1,11 +1,11 @@
 # Muon Optimizer
 
-This bonus material illustrates how to use PyTorch's Muon optimizer with the GPT model 训练 setup.
+This bonus material illustrates how to use PyTorch's Muon optimizer with the GPT model training setup.
 
 &nbsp;
 ## Introduction
 
-Muon (["Muon is Scalable for LLM 训练"](https://arxiv.org/abs/2502.16982)) is a relatively new optimizer for 训练 LLMs' large 2D weight matrices that dominate transformer blocks, such as attention projections, feed-forward projections, and the output head. Parameters that are not good Muon targets, such as embeddings, biases, and normalization parameters, are typically kept on AdamW, though.
+Muon (["Muon is Scalable for LLM Training"](https://arxiv.org/abs/2502.16982)) is a relatively new optimizer for training LLMs' large 2D weight matrices that dominate transformer blocks, such as attention projections, feed-forward projections, and the output head. Parameters that are not good Muon targets, such as embeddings, biases, and normalization parameters, are typically kept on AdamW, though.
 
 Concretely, that means:
 
@@ -172,10 +172,3 @@ Every effort moves you?"  "Yes--quite insensible to the irony. She wanted him vi
 ```
 
 By the way, this is not meant to be a meaningful language-modeling benchmark. The model is randomly initialized and trained for one epoch on a tiny repeated text snippet only so the optimizer path is easy to inspect and quick to run.
-
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

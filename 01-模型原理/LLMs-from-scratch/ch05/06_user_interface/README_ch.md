@@ -46,9 +46,3 @@ chainlit run app_own.py
 ```
 
 Running one of the commands above should open a new browser tab where you can interact with the model. If the browser tab does not open automatically, inspect the terminal command and copy the local address into your browser address bar (usually, the address is `http://localhost:8000`).
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

@@ -1,4 +1,4 @@
-# Olmo 3 7B and 32B 从零实现
+# Olmo 3 7B and 32B From Scratch
 
 This [standalone-olmo3.ipynb](standalone-olmo3.ipynb) Jupyter notebook in this folder contains a from-scratch implementation of Olmo 3 7B and 32B and requires about 13 GB of RAM to run. 
 
@@ -12,7 +12,7 @@ Below is a side-by-side comparison with Qwen3 as a reference model; if you are i
 
 <img src="https://sebastianraschka.com/images/LLMs-from-scratch-images/bonus/olmo3/olmo3-32B.webp?1">
 
-Olmo 3 also comes in different flavors, as shown below (the architecture is the same, only the 训练 pipeline differs):
+Olmo 3 also comes in different flavors, as shown below (the architecture is the same, only the training pipeline differs):
 
 <img src="https://sebastianraschka.com/images/LLMs-from-scratch-images/bonus/olmo3/olmo3-pipeline.webp?1">
 
@@ -20,14 +20,14 @@ Olmo 3 also comes in different flavors, as shown below (the architecture is the 
 &nbsp;
 ## How does Olmo 3 compare to Qwen3
 
-Focusing on the architecture, not the 训练 details, this section provides a brief comparison to Qwen3.
+Focusing on the architecture, not the training details, this section provides a brief comparison to Qwen3.
 
 
 The 7B model:
 
 1. As we can see in the figures above, the Olmo 3 architecture is relatively similar to Qwen3. However, it's worth noting that this is essentially likely inspired by the Olmo 2 predecessor, not Qwen3. 
 
-2) Similar to Olmo 2, Olmo 3 still uses a post-norm flavor instead of pre-norm, as they found in the Olmo 2 paper that it stabilizes the 训练.
+2) Similar to Olmo 2, Olmo 3 still uses a post-norm flavor instead of pre-norm, as they found in the Olmo 2 paper that it stabilizes the training.
 
 3) Interestingly, the 7B model still uses multi-head attention similar to Olmo 2. 
 However, to make things more efficient and reduce the KV cache size, they now use sliding-window attention (e.g., similar to Gemma 3).
@@ -52,10 +52,3 @@ To learn more about the architecture differences and read about comparisons with
 
 
 
-
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

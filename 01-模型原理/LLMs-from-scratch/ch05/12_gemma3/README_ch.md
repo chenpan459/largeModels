@@ -1,4 +1,4 @@
-# Gemma 3 270M 从零实现
+# Gemma 3 270M From Scratch
 
 This [standalone-gemma3.ipynb](standalone-gemma3.ipynb) Jupyter notebook in this folder contains a from-scratch implementation of Gemma 3 270M. It requires about 2 GB of RAM to run. 
 
@@ -36,10 +36,3 @@ To learn more about the architecture differences and read about comparisons with
 
 
 
-
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

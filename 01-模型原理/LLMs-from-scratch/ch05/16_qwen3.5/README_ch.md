@@ -1,4 +1,4 @@
-# Qwen3.5 0.8B 从零实现
+# Qwen3.5 0.8B From Scratch
 
 This folder contains a from-scratch style implementation of [Qwen/Qwen3.5-0.8B](https://huggingface.co/Qwen/Qwen3.5-0.8B).
 
@@ -18,10 +18,3 @@ The notebooks keep the full model flow readable while reusing the linear-attenti
 - [qwen3.5-plus-kv-cache.ipynb](qwen3.5-plus-kv-cache.ipynb): Same model with KV-cache decoding for efficiency.
 - [qwen3_5_transformers.py](qwen3_5_transformers.py): Some helper components from Hugging Face Transformers used for Qwen3.5 linear attention.
 
-
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

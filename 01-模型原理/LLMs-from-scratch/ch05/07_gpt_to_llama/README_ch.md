@@ -4,7 +4,7 @@
 
 This folder contains code for converting the GPT implementation from chapter 4 and 5 to Meta AI's Llama architecture in the following recommended reading order:
 
-- [converting-gpt-to-llama2.ipynb](converting-gpt-to-llama2.ipynb): contains code to convert GPT to Llama 2 7B step by step and loads 预训练权重 from Meta AI
+- [converting-gpt-to-llama2.ipynb](converting-gpt-to-llama2.ipynb): contains code to convert GPT to Llama 2 7B step by step and loads pretrained weights from Meta AI
 - [converting-llama2-to-llama3.ipynb](converting-llama2-to-llama3.ipynb): contains code to convert the Llama 2 model to Llama 3, Llama 3.1, and Llama 3.2
 - [standalone-llama32.ipynb](standalone-llama32.ipynb): a standalone notebook implementing Llama 3.2
 
@@ -23,7 +23,7 @@ For an easy way to use the Llama 3.2 1B and 3B models, you can also use the `llm
 pip install llms_from_scratch blobfile
 ```
 
-(Note that `blobfile` is needed to load the 分词器.)
+(Note that `blobfile` is needed to load the tokenizer.)
 
 &nbsp;
 #### 2) Model and text generation settings
@@ -97,14 +97,14 @@ model.to(device)
 ```
 
 &nbsp;
-#### 4) Initialize 分词器
+#### 4) Initialize tokenizer
 
-The following code downloads and initializes the 分词器:
+The following code downloads and initializes the tokenizer:
 
 ```python
-from llms_from_scratch.llama3 import Llama3分词器, ChatFormat, clean_text
+from llms_from_scratch.llama3 import Llama3Tokenizer, ChatFormat, clean_text
 
-TOKENIZER_FILE = "分词器.model"
+TOKENIZER_FILE = "tokenizer.model"
 
 url = f"https://huggingface.co/rasbt/llama-3.2-from-scratch/resolve/main/{TOKENIZER_FILE}"
 
@@ -112,10 +112,10 @@ if not os.path.exists(TOKENIZER_FILE):
     urllib.request.urlretrieve(url, TOKENIZER_FILE)
     print(f"Downloaded to {TOKENIZER_FILE}")
     
-分词器 = Llama3分词器("分词器.model")
+tokenizer = Llama3Tokenizer("tokenizer.model")
 
 if "instruct" in MODEL_FILE:
-    分词器 = ChatFormat(分词器)
+    tokenizer = ChatFormat(tokenizer)
 ```
 
 &nbsp;
@@ -138,7 +138,7 @@ start = time.time()
 
 token_ids = generate(
     model=model,
-    idx=text_to_token_ids(PROMPT, 分词器).to(device),
+    idx=text_to_token_ids(PROMPT, tokenizer).to(device),
     max_new_tokens=MAX_NEW_TOKENS,
     context_size=LLAMA32_CONFIG["context_length"],
     top_k=TOP_K,
@@ -154,7 +154,7 @@ if torch.cuda.is_available():
     max_mem_gb = max_mem_bytes / (1024 ** 3)
     print(f"Max memory allocated: {max_mem_gb:.2f} GB")
 
-output_text = token_ids_to_text(token_ids, 分词器)
+output_text = token_ids_to_text(token_ids, tokenizer)
 
 if "instruct" in MODEL_FILE:
     output_text = clean_text(output_text)
@@ -235,7 +235,7 @@ model = Llama3Model(LLAMA32_CONFIG)
 # ...
 token_ids = generate_text_simple(
     model=model,
-    idx=text_to_token_ids(PROMPT, 分词器).to(device),
+    idx=text_to_token_ids(PROMPT, tokenizer).to(device),
     max_new_tokens=MAX_NEW_TOKENS,
     context_size=LLAMA32_CONFIG["context_length"],
 )
@@ -261,10 +261,3 @@ Note that the peak memory usage is only listed for Nvidia CUDA devices, as it is
 | Llama3Model | KV cache compiled | Nvidia A100 GPU | 161        | 3.61 GB           |
 
 Note that all settings above have been tested to produce the same text outputs.
-
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

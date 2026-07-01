@@ -1,4 +1,4 @@
-# Tiny Aya 3.35B 从零实现
+# Tiny Aya 3.35B From Scratch
 
 Tiny Aya is a new, "small" LLM by Cohere that is said to be the "most capable multi-lingual open-weight model" at the 3B parameter size class. (Tiny Aya outperforms Qwen3-4B, Gemma 3 4B, and Ministral 3 3B according to the [announcement post](https://cohere.com/blog/cohere-labs-tiny-aya)).
 
@@ -57,10 +57,3 @@ To learn more about the architecture differences and read about comparisons with
 
 
 
-
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

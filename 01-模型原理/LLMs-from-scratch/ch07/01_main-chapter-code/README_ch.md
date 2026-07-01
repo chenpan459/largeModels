@@ -2,17 +2,15 @@
 
 ### 主章节代码
 
-- [ch07.ipynb](ch07.ipynb) 包含章节中出现的全部代码
+- [ch07.ipynb](ch07.ipynb) / [ch07_ch.ipynb](ch07_ch.ipynb) 包含章节中出现的全部代码
 - [previous_chapters.py](previous_chapters.py) 是 Python 模块，包含前几章实现并训练的 GPT 模型及诸多工具函数，本章复用
 - [gpt_download.py](gpt_download.py) 包含下载预训练 GPT 模型权重的工具函数
-- [exercise-solutions.ipynb](exercise-solutions.ipynb) / [exercise-solutions_ch.ipynb](exercise-solutions_ch.ipynb) 包含本章练习解答
-
+- [exercise-solutions.ipynb](exercise-solutions.ipynb) / [exercise-solutions_ch.ipynb](exercise-solutions_ch.ipynb) 本章练习解答
 
 ### 可选代码
 
-- [load-finetuned-model.ipynb](load-finetuned-model.ipynb) / [load-finetuned-model_ch.ipynb](load-finetuned-model_ch.ipynb) 是独立 Jupyter notebook，用于加载本章创建的指令微调模型
-
-- [gpt_instruction_finetuning.py](gpt_instruction_finetuning.py) 是独立 Python 脚本，汇总主章节中的指令微调流程（可视为聚焦微调部分的章节小结）
+- [load-finetuned-model.ipynb](load-finetuned-model.ipynb) / [load-finetuned-model_ch.ipynb](load-finetuned-model_ch.ipynb) 独立 Jupyter notebook，用于加载本章创建的指令微调模型
+- [gpt_instruction_finetuning.py](gpt_instruction_finetuning.py) 独立 Python 脚本，汇总 [ch07.ipynb](ch07.ipynb) / [ch07_ch.ipynb](ch07_ch.ipynb) 中指令微调的代码（可视为章节小结）
 
 用法：
 
@@ -58,7 +56,7 @@ Responses saved as instruction-data-with-response-standalone.json
 Model saved as gpt2-medium355M-sft-standalone.pth
 ```
 
-- [ollama_evaluate.py](ollama_evaluate.py) 是独立 Python 脚本，汇总主章节中的评估流程（可视为聚焦评估部分的章节小结）
+- [ollama_evaluate.py](ollama_evaluate.py) 独立 Python 脚本，汇总主章节中的评估流程（可视为聚焦评估部分的章节小结）
 
 用法：
 
@@ -74,10 +72,3 @@ Average score: 51.75
 ```
 
 - [exercise_experiments.py](exercise_experiments.py) 是实现练习解答的可选脚本；详见 [exercise-solutions.ipynb](exercise-solutions.ipynb) / [exercise-solutions_ch.ipynb](exercise-solutions_ch.ipynb)
-
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

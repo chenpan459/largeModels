@@ -6,10 +6,3 @@ This folder contains code notebooks that swap in other LLMs (for example, Qwen3 
 
 
 
-
-
-## 中文文档
-
-| 原文 | 中文版 |
-|------|--------|
-| [README.md](README.md) | [README_ch.md](README_ch.md) |

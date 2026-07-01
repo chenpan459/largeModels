@@ -8,7 +8,7 @@
 &nbsp;
 ## 补充材料
 
-- [02_setup-recommendations](02_setup-recommendations) contains Python installation and setup recommendations.
+- [02_setup-recommendations](02_setup-recommendations) 包含 Python 安装与环境配置建议
 
 ## 中文文档
 
