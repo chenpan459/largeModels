@@ -1,10 +1,10 @@
-# Olmo 3 7B and 32B From Scratch
+# 从零实现 Olmo 3 7B 与 32B
 
-This [standalone-olmo3.ipynb](standalone-olmo3.ipynb) Jupyter notebook in this folder contains a from-scratch implementation of Olmo 3 7B and 32B and requires about 13 GB of RAM to run. 
+本目录中的 [standalone-olmo3.ipynb](standalone-olmo3.ipynb) / [standalone-olmo3_ch.ipynb](standalone-olmo3_ch.ipynb) Jupyter notebook 包含 Olmo 3 7B 与 32B 的从零实现，运行大约需要 13 GB 内存。
 
-The alternative [standalone-olmo3-plus-kvcache.ipynb](standalone-olmo3-plus-kv-cache.ipynb) notebook adds a KV cache for better runtime performance (but adds more code complexity). To learn more about KV caching, see my [Understanding and Coding the KV Cache in LLMs from Scratch](https://magazine.sebastianraschka.com/p/coding-the-kv-cache-in-llms) article.
+另一个 [standalone-olmo3-plus-kv-cache.ipynb](standalone-olmo3-plus-kv-cache.ipynb) / [standalone-olmo3-plus-kv-cache_ch.ipynb](standalone-olmo3-plus-kv-cache_ch.ipynb) notebook 增加了 KV cache 以提升运行时性能（但代码复杂度更高）。如需了解 KV cache，请参阅我的文章 [Understanding and Coding the KV Cache in LLMs from Scratch](https://magazine.sebastianraschka.com/p/coding-the-kv-cache-in-llms)。
 
-Below is a side-by-side comparison with Qwen3 as a reference model; if you are interested in the Qwen3 0.6B standalone notebook, you can find it [here](../11_qwen3).
+下方是与 Qwen3 作为参考模型的并排对比；若对 Qwen3 0.6B 独立 notebook 感兴趣，可前往 [此处](../11_qwen3)。
 
 <br>
 
@@ -12,33 +12,32 @@ Below is a side-by-side comparison with Qwen3 as a reference model; if you are i
 
 <img src="https://sebastianraschka.com/images/LLMs-from-scratch-images/bonus/olmo3/olmo3-32B.webp?1">
 
-Olmo 3 also comes in different flavors, as shown below (the architecture is the same, only the training pipeline differs):
+Olmo 3 还有多种变体（如下所示；架构相同，仅训练流程不同）：
 
 <img src="https://sebastianraschka.com/images/LLMs-from-scratch-images/bonus/olmo3/olmo3-pipeline.webp?1">
 
 
 &nbsp;
-## How does Olmo 3 compare to Qwen3
+## Olmo 3 与 Qwen3 的对比
 
-Focusing on the architecture, not the training details, this section provides a brief comparison to Qwen3.
+本节聚焦架构（而非训练细节），简要对比 Olmo 3 与 Qwen3。
 
 
-The 7B model:
+**7B 模型：**
 
-1. As we can see in the figures above, the Olmo 3 architecture is relatively similar to Qwen3. However, it's worth noting that this is essentially likely inspired by the Olmo 2 predecessor, not Qwen3. 
+1. 如上所示，Olmo 3 架构与 Qwen3 较为相似。不过值得注意的是，这很可能主要受 Olmo 2 前代启发，而非 Qwen3。
 
-2) Similar to Olmo 2, Olmo 3 still uses a post-norm flavor instead of pre-norm, as they found in the Olmo 2 paper that it stabilizes the training.
+2. 与 Olmo 2 类似，Olmo 3 仍采用 post-norm 风格而非 pre-norm，因为 Olmo 2 论文发现这有助于稳定训练。
 
-3) Interestingly, the 7B model still uses multi-head attention similar to Olmo 2. 
-However, to make things more efficient and reduce the KV cache size, they now use sliding-window attention (e.g., similar to Gemma 3).
+3. 有趣的是，7B 模型仍使用与 Olmo 2 类似的多头注意力（MHA）。不过为提升效率并减小 KV cache 体积，现已采用滑动窗口注意力（例如与 Gemma 3 类似）。
 
-Next, the 32B model:
+**32B 模型：**
 
-4) Overall, it's the same architecture but just scaled up. Also, the proportions (e.g., going from the input to the intermediate size in the feed-forward layer, and so on) roughly match the ones in Qwen3. 
+4. 整体架构相同，只是规模更大。此外，各层比例（例如前馈层从输入到中间维度的扩展等）与 Qwen3 大致相当。
 
-5) My guess is the architecture was initially somewhat smaller than Qwen3 due to the smaller vocabulary, and they then scaled up the intermediate size expansion from 5x in Qwen3 to 5.4 in Olmo 3 to have a 32B model for a direct comparison. 
+5. 我猜测，由于词表较小，架构最初略小于 Qwen3；随后他们将 Qwen3 中 5× 的中间维度扩展比例提高到 Olmo 3 的 5.4×，从而得到 32B 模型以便直接对比。
 
-6) Also, note that the 32B model (finally!) uses grouped query attention.
+6. 另外请注意，32B 模型（终于！）使用了分组查询注意力（GQA）。
 
 
 
@@ -46,9 +45,7 @@ Next, the 32B model:
 
 <br>
 
-To learn more about the architecture differences and read about comparisons with other architectures, see my [The Big LLM Architecture Comparison: From DeepSeek-V3 to Kimi K2: A Look At Modern LLM Architecture Design](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison) article.
-
-
+如需了解架构差异并阅读与其他架构的对比，请参阅我的文章 [The Big LLM Architecture Comparison: From DeepSeek-V3 to Kimi K2: A Look At Modern LLM Architecture Design](https://magazine.sebastianraschka.com/p/the-big-llm-architecture-comparison) 文章。
 
 
 

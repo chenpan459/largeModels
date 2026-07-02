@@ -44,18 +44,16 @@ pip install llms_from_scratch tokenizers
 
 ```python
 USE_REASONING_MODEL = True
-# Uses the base model if USE_REASONING_MODEL = False
+# 若 USE_REASONING_MODEL = False，则使用 base 模型
 
 USE_INSTRUCT_MODEL = False
-# Uses the instruct mode (without reasoning) if 
-# USE_REASONING_MODEL = True
-# USE_INSTRUCT_MODEL = True
-# This setting does have no effect if USE_REASONING_MODEL = False
+# 若 USE_REASONING_MODEL = True 且 USE_INSTRUCT_MODEL = True，
+# 则使用 instruct 模式（不含 reasoning）
+# 若 USE_REASONING_MODEL = False，此设置无效
 
 
-# Use
+# 对 Qwen3 Coder Flash 模型同样使用
 # USE_REASONING_MODEL = True
-# For Qwen3 Coder Flash model as well
 ```
 
 可由用户定义的基本文本生成设置。150 个 token 时，0.6B 模型约需 1.5 GB 内存。
@@ -225,17 +223,17 @@ output_token_ids = generate(
 )
 
 total_time = time.time() - start
-print(f"Time: {total_time:.2f} sec")
-print(f"{int(len(output_token_ids[0])/total_time)} tokens/sec")
+print(f"耗时: {total_time:.2f} 秒")
+print(f"{int(len(output_token_ids[0])/total_time)} tokens/秒")
 
 if torch.cuda.is_available():
     max_mem_bytes = torch.cuda.max_memory_allocated()
     max_mem_gb = max_mem_bytes / (1024 ** 3)
-    print(f"Max memory allocated: {max_mem_gb:.2f} GB")
+    print(f"最大显存占用: {max_mem_gb:.2f} GB")
 
 output_text = tokenizer.decode(output_token_ids.squeeze(0).tolist())
 
-print("\n\nOutput text:\n\n", output_text + "...")
+print("\n\n输出文本：\n\n", output_text + "...")
 ```
 
 使用 Qwen3 0.6B reasoning 模型时，输出应类似于下方所示（在 A100 上运行）：
@@ -294,7 +292,7 @@ model = torch.compile(model)
 
 下表展示了 A100 上后续 `generate` 调用的性能对比：
 
-|                          | Hardware        | Tokens/sec | Memory   |
+|                          | 硬件            | Tokens/秒 | 显存     |
 | ------------------------ | ----------------|----------- | -------- |
 | Qwen3Model 0.6B          | Nvidia A100 GPU | 25         | 1.49 GB  |
 | Qwen3Model 0.6B compiled | Nvidia A100 GPU | 107        | 1.99 GB  |
@@ -318,7 +316,7 @@ token_ids = generate_text_simple(
 )
 ```
 
-| Model           | Mode              | Hardware        | Tokens/sec | GPU Memory (VRAM) |
+| Model           | 模式              | 硬件            | Tokens/秒 | GPU 显存 (VRAM) |
 | --------------- | ----------------- | --------------- | ---------- | ----------------- |
 | Qwen3Model 0.6B | Regular           | Mac Mini M4 CPU | 1          | -                 |
 | Qwen3Model 0.6B | Regular compiled  | Mac Mini M4 CPU | 1          | -                 |
@@ -373,7 +371,7 @@ from llms_from_scratch.kv_cache_batched.qwen3 import Qwen3Model
 
 以下实验在 batch size 为 8 时运行。
 
-| Model            | Mode              | Hardware        | Batch size | Tokens/sec | GPU Memory (VRAM) |
+| Model            | 模式              | 硬件            | Batch size | Tokens/秒 | GPU 显存 (VRAM) |
 | ---------------- | ----------------- | --------------- | ---------- | ---------- | ----------------- |
 | Qwen3Model  0.6B | Regular           | Nvidia A100 GPU | 8          | 184        | 2.19 GB           |
 | Qwen3Model 0.6B  | Regular compiled  | Nvidia A100 GPU | 8          | 351        | 2.19 GB           |

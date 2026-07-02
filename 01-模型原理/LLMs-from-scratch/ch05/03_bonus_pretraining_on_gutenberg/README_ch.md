@@ -1,66 +1,65 @@
-# Pretraining GPT on the Project Gutenberg Dataset
+# 在 Project Gutenberg 数据集上预训练 GPT
 
-The code in this directory contains code for training a small GPT model on the free books provided by Project Gutenberg.
+本目录包含在 Project Gutenberg 提供的免费书籍上训练小型 GPT 模型的代码。
 
-As the Project Gutenberg website states, "the vast majority of Project Gutenberg eBooks are in the public domain in the US."
+正如 Project Gutenberg 网站所述：「绝大多数 Project Gutenberg 电子书在美国属于公有领域。」
 
-Please read the [Project Gutenberg Permissions, Licensing and other Common Requests](https://www.gutenberg.org/policy/permission.html) page for more information about using the resources provided by Project Gutenberg.
-
-&nbsp;
-## How to Use This Code
+使用 Project Gutenberg 资源前，请阅读 [Project Gutenberg 权限、许可与其他常见请求](https://www.gutenberg.org/policy/permission.html) 页面。
 
 &nbsp;
-
-### 1) Download the dataset
-
-In this section, we download books from Project Gutenberg using code from the [`pgcorpus/gutenberg`](https://github.com/pgcorpus/gutenberg) GitHub repository.
-
-As of this writing, this will require approximately 50 GB of disk space and take about 10-15 hours, but it may be more depending on how much Project Gutenberg grew since then.
+## 如何使用本代码
 
 &nbsp;
-#### Download instructions for Linux and macOS users
 
+### 1）下载数据集
 
-Linux and macOS users can follow these steps to download the dataset (if you are a Windows user, please see the note below):
+本节使用 [`pgcorpus/gutenberg`](https://github.com/pgcorpus/gutenberg) GitHub 仓库中的代码，从 Project Gutenberg 下载书籍。
 
-1. Set the `03_bonus_pretraining_on_gutenberg` folder as working directory to clone the `gutenberg` repository locally in this folder (this is necessary to run the provided scripts `prepare_dataset.py` and `pretraining_simple.py`). For instance, when being in the `LLMs-from-scratch` repository's folder, navigate into the *03_bonus_pretraining_on_gutenberg* folder via:
+截至编写时，大约需要 50 GB 磁盘空间，耗时约 10–15 小时；具体取决于 Project Gutenberg 此后增长了多少。
+
+&nbsp;
+#### Linux 与 macOS 用户下载说明
+
+Linux 与 macOS 用户可按以下步骤下载数据集（Windows 用户请参阅下方说明）：
+
+1. 将 `03_bonus_pretraining_on_gutenberg` 文件夹设为工作目录，以便在本目录下克隆 `gutenberg` 仓库（运行 `prepare_dataset.py` 和 `pretraining_simple.py` 时需要）。例如，在 `LLMs-from-scratch` 仓库根目录下执行：
 ```bash
 cd ch05/03_bonus_pretraining_on_gutenberg
 ```
 
-2. Clone the `gutenberg` repository in there:
+2. 克隆 `gutenberg` 仓库：
 ```bash
 git clone https://github.com/pgcorpus/gutenberg.git
 ```
 
-3. Navigate into the locally cloned `gutenberg` repository's folder:
+3. 进入本地克隆的 `gutenberg` 仓库目录：
 ```bash
 cd gutenberg
 ```
 
-4. Install the required packages defined in *requirements.txt* from the `gutenberg` repository's folder:
+4. 在 `gutenberg` 仓库目录中安装 *requirements.txt* 中定义的依赖：
 ```bash
 pip install -r requirements.txt
 ```
 
-5. Download the data:
+5. 下载数据：
 ```bash
 python get_data.py
 ```
 
-6. Go back into the `03_bonus_pretraining_on_gutenberg` folder
+6. 返回 `03_bonus_pretraining_on_gutenberg` 文件夹：
 ```bash
 cd ..
 ```
 
 &nbsp;
-#### Special instructions for Windows users
+#### Windows 用户特别说明
 
-The [`pgcorpus/gutenberg`](https://github.com/pgcorpus/gutenberg) code is compatible with both Linux and macOS. However, Windows users would have to make small adjustments, such as adding `shell=True` to the `subprocess` calls and replacing `rsync`.
+[`pgcorpus/gutenberg`](https://github.com/pgcorpus/gutenberg) 代码兼容 Linux 与 macOS。Windows 用户需做少量调整，例如在 `subprocess` 调用中添加 `shell=True`，并将 `rsync` 替换为等价方案。
 
-Alternatively, an easier way to run this code on Windows is by using the "Windows Subsystem for Linux" (WSL) feature, which allows users to run a Linux environment using Ubuntu in Windows. For more information, please read [Microsoft's official installation instruction](https://learn.microsoft.com/en-us/windows/wsl/install) and [tutorial](https://learn.microsoft.com/en-us/training/modules/wsl-introduction/).
+在 Windows 上更简便的方式是使用「Windows Subsystem for Linux」（WSL），在 Windows 中运行 Ubuntu 等 Linux 环境。详见 [Microsoft 官方安装说明](https://learn.microsoft.com/en-us/windows/wsl/install) 与 [教程](https://learn.microsoft.com/en-us/training/modules/wsl-introduction/)。
 
-When using WSL, please make sure you have Python 3 installed (check via `python3 --version`, or install it for instance with `sudo apt-get install -y python3.10` for Python 3.10) and install following packages there:
+使用 WSL 时，请确保已安装 Python 3（通过 `python3 --version` 检查，或例如 `sudo apt-get install -y python3.10` 安装 Python 3.10），并安装以下包：
 
 ```bash
 sudo apt-get update && \
@@ -70,15 +69,15 @@ sudo apt-get install -y python-is-python3 && \
 sudo apt-get install -y rsync
 ```
 
-> **Note:**
-> Instructions about how to set up Python and installing packages can be found in [Optional Python Setup Preferences](../../setup/01_optional-python-setup-preferences/README.md) and [Installing Python Libraries](../../setup/02_installing-python-libraries/README.md).
+> **说明：**
+> Python 环境与包安装说明见 [可选 Python 环境配置](../../setup/01_optional-python-setup-preferences/README.md) 与 [安装 Python 库](../../setup/02_installing-python-libraries/README.md)。
 >
-> Optionally, a Docker image running Ubuntu is provided with this repository. Instructions about how to run a container with the provided Docker image can be found in [Optional Docker Environment](../../setup/03_optional-docker-environment/README.md).
+> 本仓库还提供运行 Ubuntu 的 Docker 镜像。使用说明见 [可选 Docker 环境](../../setup/03_optional-docker-environment/README.md)。
 
 &nbsp;
-### 2) Prepare the dataset
+### 2）准备数据集
 
-Next, run the `prepare_dataset.py` script, which concatenates the (as of this writing, 60,173) text files into fewer larger files so that they can be more efficiently transferred and accessed:
+接下来运行 `prepare_dataset.py`，将（截至编写时约 60,173 个）文本文件合并为更少、更大的文件，便于传输与访问：
 
 ```bash
 python prepare_dataset.py \
@@ -94,17 +93,17 @@ Skipping gutenberg/data/raw/PG29836_raw.txt as it does not contain primarily Eng
 ```
 
 
-> **Tip:**
-> Note that the produced files are stored in plaintext format and are not pre-tokenized for simplicity. However, you may want to update the codes to store the dataset in a pre-tokenized form to save computation time if you are planning to use the dataset more often or train for multiple epochs. See the *Design Decisions and Improvements* at the bottom of this page for more information.
+> **提示：**
+> 生成的文件为纯文本格式，为简化起见未预先分词。若需多次使用数据集或训练多个 epoch，可改为保存已分词数据以节省计算时间。详见本页底部 *设计决策与改进*。
 
-> **Tip:**
-> You can choose smaller file sizes, for example, 50 MB. This will result in more files but might be useful for quicker pretraining runs on a small number of files for testing purposes.
+> **提示：**
+> 可选择更小的文件大小，例如 50 MB。文件会更多，但适合在少量文件上快速试跑预训练。
 
 
 &nbsp;
-### 3) Run the pretraining script
+### 3）运行预训练脚本
 
-You can run the pretraining script as follows. Note that the additional command line arguments are shown with the default values for illustration purposes:
+可按如下方式运行预训练脚本。下列命令行参数以默认值展示，便于理解：
 
 ```bash
 python pretraining_simple.py \
@@ -114,7 +113,7 @@ python pretraining_simple.py \
   --output_dir model_checkpoints
 ```
 
-The output will be formatted in the following way:
+输出格式大致如下：
 
 > Total files: 3
 > Tokenizing file 1 of 3: data_small/combined_1.txt
@@ -145,30 +144,30 @@ The output will be formatted in the following way:
 
 
 &nbsp;
-> **Tip:**
-> In practice, if you are using macOS or Linux, I recommend using the `tee` command to save the log outputs to a `log.txt` file in addition to printing them on the terminal:
+> **提示：**
+> 在 macOS 或 Linux 上，建议用 `tee` 将日志同时写入 `log.txt` 并在终端显示：
 
 ```bash
 python -u pretraining_simple.py | tee log.txt
 ```
 
 &nbsp;
-> **Warning:**
-> Note that training on 1 of the ~500 Mb text files in the `gutenberg_preprocessed` folder will take approximately 4 hours on a V100 GPU.
-> The folder contains 47 files and will take approximately 200 hours (more than 1 week) to complete. You may want to run it on a smaller number of files.
+> **警告：**
+> 在 V100 GPU 上，`gutenberg_preprocessed` 文件夹中约 500 MB 的单个文本文件预训练大约需要 4 小时。
+> 该文件夹约有 47 个文件，全部跑完约需 200 小时（超过一周）。可先对少量文件试跑。
 
 
 &nbsp;
-## Design Decisions and Improvements
+## 设计决策与改进
 
-Note that this code focuses on keeping things simple and minimal for educational purposes. The code could be improved in the following ways to improve modeling performance and training efficiency:
+本代码以教学为目的，保持简单、最小化。以下改进可提升建模效果与训练效率：
 
-1. Modify the `prepare_dataset.py` script to strip the Gutenberg boilerplate text from each book file.
-2. Update the data preparation and loading utilities to pre-tokenize the dataset and save it in a tokenized form so that it doesn't have to be re-tokenized each time when calling the pretraining script.
-3. Update the `train_model_simple` script by adding the features introduced in [Appendix D: Adding Bells and Whistles to the Training Loop](../../appendix-D/01_main-chapter-code/appendix-D.ipynb), namely, cosine decay, linear warmup, and gradient clipping.
-4. Update the pretraining script to save the optimizer state (see section *5.4 Loading and saving weights in PyTorch* in chapter 5; [ch05.ipynb](../../ch05/01_main-chapter-code/ch05.ipynb)) and add the option to load an existing model and optimizer checkpoint and continue training if the training run was interrupted.
-5. Add a more advanced logger (for example, Weights and Biases) to view the loss and validation curves live
-6. Add distributed data parallelism (DDP) and train the model on multiple GPUs (see section *A.9.3 Training with multiple GPUs* in appendix A; [DDP-script.py](../../appendix-A/01_main-chapter-code/DDP-script.py)).
-7. Swap the from scratch `MultiheadAttention` class in the `previous_chapter.py` script with the efficient `MHAPyTorchScaledDotProduct` class implemented in the [Efficient Multi-Head Attention Implementations](../../ch03/02_bonus_efficient-multihead-attention/mha-implementations.ipynb) bonus section, which uses Flash Attention via PyTorch's `nn.functional.scaled_dot_product_attention` function.
-8. Speeding up the training by optimizing the model via [torch.compile](https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html) (`model = torch.compile`) or [thunder](https://github.com/Lightning-AI/lightning-thunder) (`model = thunder.jit(model)`).
-9. Implement Gradient Low-Rank Projection (GaLore) to further speed up the pretraining process. This can be achieved by just replacing the `AdamW` optimizer with the provided `GaLoreAdamW` provided in the [GaLore Python library](https://github.com/jiaweizzhao/GaLore).
+1. 修改 `prepare_dataset.py`，从每本书中去除 Gutenberg 固定页眉页脚等 boilerplate 文本。
+2. 更新数据准备与加载工具，预先分词并保存，避免每次运行预训练脚本时重复分词。
+3. 更新 `train_model_simple`，加入 [附录 D：为训练循环添加增强功能](../../appendix-D/01_main-chapter-code/appendix-D.ipynb) 中的余弦衰减、线性 warmup 与梯度裁剪。
+4. 更新预训练脚本以保存优化器状态（见第 5 章 *5.4 在 PyTorch 中加载与保存权重*；[ch05_ch.ipynb](../01_main-chapter-code/ch05_ch.ipynb)），并支持加载已有模型与优化器 checkpoint，在中断后继续训练。
+5. 接入更完善的日志工具（如 Weights and Biases），实时查看损失与验证曲线。
+6. 加入分布式数据并行（DDP），在多 GPU 上训练（见附录 A *A.9.3 多 GPU 训练*；[DDP-script.py](../../appendix-A/01_main-chapter-code/DDP-script.py)）。
+7. 将 `previous_chapter.py` 中从零实现的 `MultiheadAttention` 替换为 [高效多头注意力实现](../../ch03/02_bonus_efficient-multihead-attention/mha-implementations.ipynb) 中的 `MHAPyTorchScaledDotProduct`，通过 PyTorch 的 `nn.functional.scaled_dot_product_attention` 使用 Flash Attention。
+8. 通过 [torch.compile](https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html)（`model = torch.compile`）或 [thunder](https://github.com/Lightning-AI/lightning-thunder)（`model = thunder.jit(model)`）编译模型以加速训练。
+9. 实现 Gradient Low-Rank Projection（GaLore）进一步加速预训练：将 `AdamW` 替换为 [GaLore Python 库](https://github.com/jiaweizzhao/GaLore) 提供的 `GaLoreAdamW` 即可。
