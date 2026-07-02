@@ -1,0 +1,25 @@
+=== /tmp/dpo_translate_log.txt ===
+Traceback (most recent call last):
+  File "<stdin>", line 168, in <module>
+  File "/home/cp/work2/largeModels/01-模型原理/LLMs-from-scratch/ch07/04_preference-tuning-with-dpo/translate_dpo_ch.py", line 9, in <module>
+    DIR = Path(__file__).resolve().parent
+NameError: name '__file__' is not defined. Did you mean: '__name__'?
+EXIT:1
+EXIT:1
+EXIT:1
+
+=== /tmp/dpo_done.txt ===
+Traceback (most recent call last):
+  File "<stdin>", line 168, in <module>
+  File "/home/cp/work2/largeModels/01-模型原理/LLMs-from-scratch/ch07/04_preference-tuning-with-dpo/translate_dpo_ch.py", line 9, in <module>
+    DIR = Path(__file__).resolve().parent
+NameError: name '__file__' is not defined. Did you mean: '__name__'?
+EXIT:1
+EXIT:1
+EXIT:1
+48819 /home/cp/work2/largeModels/01-模型原理/LLMs-from-scratch/ch07/04_preference-tuning-with-dpo/translate_dpo_ch.py
+Wrote /home/work2/largeModels/01-模型原理/LLMs-from-scratch/ch07/04_preference-tuning-with-dpo/dpo-from-scratch_ch.ipynb with 126 cells
+
+script_bytes=48819
+cells=126
+cell2_has_zh=True
