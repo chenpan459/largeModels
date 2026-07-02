@@ -2,38 +2,9 @@
 
 ## 安装
 
-### 基础安装
+环境搭建（Python 3.11、虚拟环境、依赖安装、排错）见 **[00-environment-setup.md](./00-environment-setup.md)**。
 
-```bash
-cd /home/cp/work2/largeModels/02-训练/LLaMA-Factory
-pip install -e .
-```
-
-### 可选依赖
-
-```bash
-# 量化训练（QLoRA）
-pip install -r requirements/bitsandbytes.txt
-
-# DeepSpeed 分布式
-pip install -r requirements/deepspeed.txt
-
-# vLLM 推理加速
-pip install -r requirements/vllm.txt
-
-# 评测指标
-pip install -r requirements/metrics.txt
-
-# 实验追踪
-pip install -r requirements/swanlab.txt
-```
-
-### Docker 部署
-
-```bash
-cd docker/docker-cuda
-docker compose up -d
-```
+前置条件：已激活虚拟环境并验证 `llamafactory-cli version` 正常。
 
 ## 快速开始：LoRA 微调
 
