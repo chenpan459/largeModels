@@ -6,11 +6,12 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
 from app.config import get_config
+from app.embedder import get_embedder
 from app.llama_client import LlamaClient
+from app.qdrant_client import create_qdrant_client
 
 SUPPORTED_SUFFIX = {".md", ".txt", ".markdown"}
 
@@ -82,8 +83,9 @@ class KnowledgeStore:
         cfg = get_config()
         q = cfg["qdrant"]
         self.collection = q["collection"]
-        self.client = QdrantClient(host=q["host"], port=q["port"])
+        self.client = create_qdrant_client()
         self.llama = LlamaClient()
+        self.embedder = get_embedder()
         self.vector_size: int | None = None
 
     def health(self) -> tuple[bool, int]:
@@ -112,7 +114,7 @@ class KnowledgeStore:
         batch_size = 32
         all_vectors: list[list[float]] = []
         for i in range(0, len(texts), batch_size):
-            all_vectors.extend(self.llama.embed(texts[i : i + batch_size]))
+            all_vectors.extend(self.embedder.embed(texts[i : i + batch_size]))
 
         vector_size = len(all_vectors[0])
         self.ensure_collection(vector_size)

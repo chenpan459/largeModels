@@ -69,9 +69,13 @@ python -m app.main
 
 | 端点 | 方法 | 说明 |
 |------|------|------|
-| `/` | GET | 客服 Web 界面 |
+| `/` | GET | Web 界面（问答 + 知识库管理） |
 | `/api/health` | GET | 健康检查 |
+| `/api/docs` | GET | 列出知识库文档 |
+| `/api/docs/upload` | POST | 上传文档（multipart） |
+| `/api/docs/{path}` | DELETE | 删除文档 |
 | `/api/ingest` | POST | 重新索引 `data/docs/` |
+| `/api/search` | POST | 仅检索 `{"question":"..."}` |
 | `/api/ask` | POST | 问答 `{"question": "..."}` |
 
 ### 问答示例
@@ -84,9 +88,24 @@ curl -s http://127.0.0.1:8000/api/ask \
 
 ## 知识库管理
 
-1. 将 Markdown/TXT 文档放入 `data/docs/`
-2. 调用 `POST /api/ingest` 或运行入库脚本
-3. 支持按目录组织，文件名和一级标题作为文档标题
+1. **Web UI**：打开「知识库管理」Tab，上传 `.md` / `.txt` 文件，点击「重新入库」
+2. **手动放置**：将文档放入 `data/docs/`，调用 `POST /api/ingest`
+3. 内置示例：`faq.md`、`return_policy.md`、`membership.md`、`shipping.md`
+
+### 上传示例
+
+```bash
+curl -F "file=@data/docs/faq.md" http://127.0.0.1:8000/api/docs/upload
+curl -X POST http://127.0.0.1:8000/api/ingest
+```
+
+### 仅检索（不调 LLM）
+
+```bash
+curl -s http://127.0.0.1:8000/api/search \
+  -H "Content-Type: application/json" \
+  -d '{"question":"运费怎么算？"}' | python3 -m json.tool
+```
 
 ## 配置
 

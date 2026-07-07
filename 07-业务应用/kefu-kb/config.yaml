@@ -1,5 +1,10 @@
 # 客服知识库配置
 
+# Embedding：local 无需 llama-server 即可入库/检索；llama 走 llama-server /v1/embeddings
+embedding:
+  backend: local
+  local_model: paraphrase-multilingual-MiniLM-L12-v2
+
 llama:
   base_url: "http://127.0.0.1:8080"
   api_key: "no-key"
@@ -9,6 +14,7 @@ llama:
   timeout: 120
 
 qdrant:
+  local_path: "data/qdrant_storage"
   host: "127.0.0.1"
   port: 6333
   collection: "kefu_kb"
@@ -18,7 +24,7 @@ rag:
   chunk_overlap: 80
   top_k: 8
   top_n: 3
-  use_rerank: true
+  use_rerank: false
   score_threshold: 0.35
 
 paths:

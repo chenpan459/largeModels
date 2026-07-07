@@ -3,12 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>智能客服 - 知识库问答</title>
+  <title>知识库 · 智能问答</title>
   <style>
     :root {
       --bg: #f0f2f5;
       --panel: #fff;
       --primary: #1677ff;
+      --danger: #ff4d4f;
       --text: #1f1f1f;
       --muted: #8c8c8c;
       --border: #e8e8e8;
@@ -32,9 +33,30 @@
     }
     header h1 { font-size: 18px; font-weight: 600; }
     #status { font-size: 13px; color: var(--muted); }
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 12px 24px 0;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      padding: 8px 16px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 14px;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+    }
+    .tab.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 600;
+    }
     main {
       flex: 1;
-      max-width: 860px;
+      max-width: 960px;
       width: 100%;
       margin: 0 auto;
       display: flex;
@@ -42,6 +64,8 @@
       padding: 16px;
       overflow: hidden;
     }
+    .panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .panel.active { display: flex; }
     #chat {
       flex: 1;
       overflow-y: auto;
@@ -86,6 +110,7 @@
       display: flex;
       gap: 8px;
     }
+    textarea, input[type=file] { font-family: inherit; }
     textarea {
       flex: 1;
       border: none;
@@ -94,17 +119,19 @@
       outline: none;
       min-height: 44px;
       max-height: 120px;
-      font-family: inherit;
     }
     button {
       background: var(--primary);
       color: #fff;
       border: none;
       border-radius: 8px;
-      padding: 0 20px;
+      padding: 0 16px;
       cursor: pointer;
       font-size: 14px;
+      height: 36px;
     }
+    button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    button.danger { background: var(--danger); }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
     .welcome {
       text-align: center;
@@ -128,35 +155,104 @@
       cursor: pointer;
     }
     .chip:hover { border-color: var(--primary); color: var(--primary); }
+    .kb-toolbar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .kb-toolbar input[type=file] { flex: 1; min-width: 200px; }
+    #doc-list {
+      flex: 1;
+      overflow-y: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+    }
+    .doc-item {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .doc-item:last-child { border-bottom: none; }
+    .doc-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .doc-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .toast {
+      margin-top: 12px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: none;
+    }
+    .toast.ok { display: block; background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; }
+    .toast.err { display: block; background: #fff2f0; border: 1px solid #ffccc7; color: #cf1322; }
   </style>
 </head>
 <body>
   <header>
-    <h1>云购商城 · 智能客服</h1>
+    <h1>云购商城 · 知识库</h1>
     <span id="status">检查服务中...</span>
   </header>
+  <div class="tabs">
+    <button class="tab active" data-panel="chat-panel">智能问答</button>
+    <button class="tab" data-panel="kb-panel">知识库管理</button>
+  </div>
   <main>
-    <div id="chat">
-      <div class="welcome">
-        <p>您好，我是智能客服，可回答配送、退换货、会员等问题。</p>
-        <div class="chips">
-          <span class="chip" data-q="退货流程是什么？">退货流程</span>
-          <span class="chip" data-q="会员有什么权益？">会员权益</span>
-          <span class="chip" data-q="运费怎么算？">运费说明</span>
-          <span class="chip" data-q="退款多久到账？">退款时效</span>
+    <section id="chat-panel" class="panel active">
+      <div id="chat">
+        <div class="welcome">
+          <p>基于 RAG 的智能客服，回答均来自知识库文档。</p>
+          <div class="chips">
+            <span class="chip" data-q="退货流程是什么？">退货流程</span>
+            <span class="chip" data-q="会员有什么权益？">会员权益</span>
+            <span class="chip" data-q="运费怎么算？">运费说明</span>
+            <span class="chip" data-q="退款多久到账？">退款时效</span>
+          </div>
         </div>
       </div>
-    </div>
-    <div class="input-area">
-      <textarea id="input" placeholder="请输入您的问题..." rows="1"></textarea>
-      <button id="send">发送</button>
-    </div>
+      <div class="input-area">
+        <textarea id="input" placeholder="请输入您的问题..." rows="1"></textarea>
+        <button id="send">发送</button>
+      </div>
+    </section>
+
+    <section id="kb-panel" class="panel">
+      <div class="kb-toolbar">
+        <input type="file" id="file-input" accept=".md,.txt,.markdown" />
+        <button id="upload-btn">上传文档</button>
+        <button id="ingest-btn" class="secondary">重新入库</button>
+        <button id="refresh-btn" class="secondary">刷新列表</button>
+      </div>
+      <div id="doc-list"></div>
+      <div id="toast" class="toast"></div>
+    </section>
   </main>
   <script>
     const chat = document.getElementById('chat');
     const input = document.getElementById('input');
     const sendBtn = document.getElementById('send');
     const statusEl = document.getElementById('status');
+    const toast = document.getElementById('toast');
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.panel).classList.add('active');
+        if (tab.dataset.panel === 'kb-panel') loadDocs();
+      };
+    });
+
+    function showToast(msg, ok = true) {
+      toast.textContent = msg;
+      toast.className = 'toast ' + (ok ? 'ok' : 'err');
+      setTimeout(() => { toast.className = 'toast'; }, 4000);
+    }
 
     async function checkHealth() {
       try {
@@ -164,7 +260,7 @@
         const d = await r.json();
         const ok = d.qdrant && d.llama;
         statusEl.textContent = ok
-          ? `知识库 ${d.points_count} 条 · 服务正常`
+          ? `向量 ${d.points_count} 条 · 服务正常`
           : `服务异常 (Qdrant:${d.qdrant} LLM:${d.llama})`;
         statusEl.style.color = ok ? '#52c41a' : '#ff4d4f';
       } catch {
@@ -176,11 +272,9 @@
     function appendMsg(text, role, sources) {
       const welcome = chat.querySelector('.welcome');
       if (welcome) welcome.remove();
-
       const div = document.createElement('div');
       div.className = 'msg ' + role;
       div.textContent = text;
-
       if (sources && sources.length) {
         const src = document.createElement('details');
         src.className = 'sources';
@@ -201,7 +295,6 @@
       appendMsg(question, 'user');
       input.value = '';
       sendBtn.disabled = true;
-
       try {
         const r = await fetch('/api/ask', {
           method: 'POST',
@@ -219,17 +312,90 @@
       }
     }
 
+    async function loadDocs() {
+      const list = document.getElementById('doc-list');
+      list.innerHTML = '<div class="doc-item">加载中...</div>';
+      try {
+        const r = await fetch('/api/docs');
+        const d = await r.json();
+        if (!d.documents.length) {
+          list.innerHTML = '<div class="doc-item">暂无文档，请上传 Markdown/TXT 文件</div>';
+          return;
+        }
+        list.innerHTML = '';
+        d.documents.forEach(doc => {
+          const item = document.createElement('div');
+          item.className = 'doc-item';
+          item.innerHTML = `
+            <div>
+              <strong>${doc.title}</strong>
+              <div class="doc-meta">${doc.filename} · ${(doc.size / 1024).toFixed(1)} KB · ${doc.updated_at.slice(0, 10)}</div>
+              <div class="doc-meta">${doc.preview}...</div>
+            </div>
+            <div class="doc-actions">
+              <button class="danger" data-path="${doc.relative_path}">删除</button>
+            </div>`;
+          item.querySelector('button').onclick = () => deleteDoc(doc.relative_path);
+          list.appendChild(item);
+        });
+      } catch (e) {
+        list.innerHTML = '<div class="doc-item">加载失败: ' + e.message + '</div>';
+      }
+    }
+
+    async function uploadDoc() {
+      const fileInput = document.getElementById('file-input');
+      if (!fileInput.files.length) {
+        showToast('请选择文件', false);
+        return;
+      }
+      const form = new FormData();
+      form.append('file', fileInput.files[0]);
+      try {
+        const r = await fetch('/api/docs/upload', { method: 'POST', body: form });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || '上传失败');
+        showToast(d.message);
+        fileInput.value = '';
+        loadDocs();
+      } catch (e) {
+        showToast(e.message, false);
+      }
+    }
+
+    async function ingestAll() {
+      try {
+        const r = await fetch('/api/ingest', { method: 'POST' });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || '入库失败');
+        showToast(d.message);
+        checkHealth();
+      } catch (e) {
+        showToast(e.message, false);
+      }
+    }
+
+    async function deleteDoc(path) {
+      if (!confirm('确定删除 ' + path + ' ？')) return;
+      try {
+        const r = await fetch('/api/docs/' + encodeURIComponent(path), { method: 'DELETE' });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.detail || '删除失败');
+        showToast(d.message);
+        loadDocs();
+      } catch (e) {
+        showToast(e.message, false);
+      }
+    }
+
     sendBtn.onclick = () => ask(input.value);
     input.onkeydown = (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        ask(input.value);
-      }
+      if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(input.value); }
     };
-
-    document.querySelectorAll('.chip').forEach(el => {
-      el.onclick = () => ask(el.dataset.q);
-    });
+    document.querySelectorAll('.chip').forEach(el => el.onclick = () => ask(el.dataset.q));
+    document.getElementById('upload-btn').onclick = uploadDoc;
+    document.getElementById('ingest-btn').onclick = ingestAll;
+    document.getElementById('refresh-btn').onclick = loadDocs;
 
     checkHealth();
     setInterval(checkHealth, 30000);

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from qdrant_client import QdrantClient
-
 from app.config import get_config
+from app.embedder import get_embedder
 from app.llama_client import LlamaClient
+from app.qdrant_client import create_qdrant_client
 from app.schemas import SourceChunk
 
 
@@ -12,15 +12,16 @@ class Retriever:
         cfg = get_config()
         q = cfg["qdrant"]
         self.collection = q["collection"]
-        self.client = QdrantClient(host=q["host"], port=q["port"])
+        self.client = create_qdrant_client()
         self.llama = LlamaClient()
+        self.embedder = get_embedder()
         self.top_k = cfg["rag"]["top_k"]
         self.top_n = cfg["rag"]["top_n"]
         self.use_rerank = cfg["rag"].get("use_rerank", True)
         self.score_threshold = cfg["rag"].get("score_threshold", 0.35)
 
     def search(self, question: str) -> list[SourceChunk]:
-        query_vector = self.llama.embed([question])[0]
+        query_vector = self.embedder.embed([question])[0]
         hits = self.client.search(
             collection_name=self.collection,
             query_vector=query_vector,
