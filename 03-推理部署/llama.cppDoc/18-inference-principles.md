@@ -1,0 +1,369 @@
+# 18 - 推理原理
+
+## 1. 概述
+
+本文档从**概念层面**解释 llama.cpp 如何做 LLM 推理——不深入源码细节，而是建立「输入文本 → 输出文本」全过程的心智模型。读完本文后，再阅读 [15-decode-graph-reuse.md](./15-decode-graph-reuse.md)、[16-kv-cache-memory.md](./16-kv-cache-memory.md)、[17-batch-system.md](./17-batch-system.md) 会更容易理解实现细节。
+
+**llama.cpp 推理的本质**：给定一段 token 序列，模型逐层计算，在最后一个位置输出对「下一个 token」的概率分布（logits），采样器从中选出下一个 token，追加到序列后重复——这就是**自回归生成**。
+
+---
+
+## 2. 自回归生成
+
+### 2.1 下一个 token 预测
+
+Transformer 语言模型的训练目标是：给定前缀 `t₁, t₂, …, tₙ`，预测 `tₙ₊₁`。推理时沿用同一模式：
+
+```
+输入:  "Hello" → tokenize → [15496]
+输出 logits → 采样 → [995]  → detokenize → " world"
+追加后: [15496, 995]
+再 decode → 采样 → [0]      → detokenize → "!"
+...
+直到 EOS 或达到最大长度
+```
+
+每一步只**新增一个 token**，但模型必须「看到」之前所有 token 的上下文——这是 **Causal（因果）Attention** 的作用：位置 `i` 只能 attend 到 `≤ i` 的位置。
+
+### 2.2 与训练的区别
+
+| 维度 | 训练 | 推理（llama.cpp） |
+|------|------|-------------------|
+| 输入 | 整段序列，并行算所有位置 loss | 逐 token 或分块推进 |
+| 输出 | 每个位置的 loss | 通常只要**最后一个位置**的 logits |
+| 状态 | 无持久 cache | 需要 **KV Cache** 保存历史 |
+
+---
+
+## 3. Prefill 与 Decode 两阶段
+
+实际推理分为两个阶段，计算特征截然不同：
+
+### 3.1 Prefill（提示词处理）
+
+用户 prompt 往往有几十到几千个 token。第一次 `llama_decode()` 会把**整段 prompt 一次性**送入模型：
+
+- **计算量大**：每个 token 都要做完整前向（但可并行）
+- **不产生用户可见输出**：prompt 部分通常不需要采样（`logits` 标志为 0）
+- **填充 KV Cache**：每一层的 K/V 向量写入 cache，供后续 decode 复用
+
+```
+Prompt: "请用一句话介绍 llama.cpp"
+         ↓ tokenize
+[tok₁, tok₂, ..., tokₙ]  ──prefill decode──►  KV cache 已填满 n 个位置
+```
+
+### 3.2 Decode（逐 token 生成）
+
+Prefill 完成后，每次只输入**一个新 token**：
+
+- **计算量小**：序列长度 +1，但只算 1 个新位置（历史靠 KV cache）
+- **每步采样一次**：从最后一个位置的 logits 选出下一个 token
+- **延迟敏感**：用户感知的「吐字速度」≈ decode 步数 × 每步耗时
+
+```
+Step 1: [new_tok₁] → logits → sample → new_tok₂
+Step 2: [new_tok₂] → logits → sample → new_tok₃
+...
+```
+
+### 3.3 llama.cpp 中的统一接口
+
+Prefill 和 decode 在 API 层面**没有分开**，都调用 `llama_decode(ctx, batch)`：
+
+- Prefill：`batch` 含多个 token（整个 prompt）
+- Decode：`batch` 通常只有 1 个 token（`llama_batch_get_one(&token, 1)`）
+
+区别体现在 batch 大小、是否输出 logits、以及 KV cache 是否在增长。详见 [17-batch-system.md](./17-batch-system.md)。
+
+```
+时间线 ─────────────────────────────────────────────►
+
+|←── Prefill: n 个 token 一次 decode ──→|←─ Decode: 每次 1 token ─→|
+|         KV cache 快速增长               |    KV cache 每次 +1       |
+|         通常不采样                      |    每步 llama_sampler_sample |
+```
+
+---
+
+## 4. 为什么需要 KV Cache
+
+### 4.1 问题：不用 cache 会怎样
+
+生成第 `n+1` 个 token 时，Attention 需要所有历史 token 的 Key/Value。若每步从头重算：
+
+- 生成 `m` 个 token 的复杂度约为 **O(m²)**（每层、每步重复计算历史）
+- 实际上不可接受——7B 模型生成 100 token 会慢几个数量级
+
+### 4.2 KV Cache 的思路
+
+每层 Attention 对 token `i` 算出 `K_i, V_i` 后**存起来**。下一步只算新 token 的 `K_new, V_new`，与 cache 中历史拼接做 attention：
+
+```
+无 cache:  每步重算 [K₁..Kₙ]     → O(n) 每层每步
+有 cache:  只算 Kₙ₊₁，读取 cache → O(1) 新计算 + O(n) 读取
+```
+
+读取仍是 O(n)，但**避免了重复的前向矩阵乘法**，decode 阶段延迟大幅下降。
+
+### 4.3 显存直觉
+
+KV cache 大小近似：
+
+```
+显存 ≈ 2 × n_layer × n_ctx × n_head × head_dim × sizeof(dtype)
+     （2 表示 K 和 V 各一份）
+```
+
+例如 7B 级模型、`n_ctx=4096`、FP16 KV，cache 约 **1–2 GB**。因此 llama.cpp 支持：
+
+- KV **量化**（`type_k` / `type_v` 设为 Q8_0、Q4_0 等）
+- KV **GPU offload**（`offload_kqv`）
+- **上下文滑动** / SWA（只保留最近窗口）
+
+实现细节见 [16-kv-cache-memory.md](./16-kv-cache-memory.md)。
+
+### 4.4 非 Transformer 架构
+
+Mamba、RWKV 等**没有经典 KV cache**，而维护**循环隐状态**（fixed-size recurrent state）。llama.cpp 用 `llama_memory_recurrent` 统一管理，对上层 API 仍呈现类似的 `memory->init_batch()` 接口。工厂选择逻辑见 [16-kv-cache-memory.md](./16-kv-cache-memory.md) 第 4 节。
+
+---
+
+## 5. 核心对象与职责
+
+```
+llama_model          # 权重 + 词表 + 架构（只读，可多 context 共享）
+    │
+    └── llama_context    # 一次推理会话（KV cache、logits buffer、采样状态）
+            │
+            ├── llama_batch / llama_ubatch   # 本次送入的 token
+            ├── llama_memory (KV / recurrent)
+            └── ggml 计算图 + backend 调度
+```
+
+| 对象 | 类比 | 生命周期 |
+|------|------|----------|
+| `llama_model` | 程序（权重） | 加载一次，可共享 |
+| `llama_context` | 进程（运行状态） | 每个会话/槽位一个 |
+| `llama_batch` | 本次输入包 | 每次 decode 临时构造 |
+| `llama_sampler` | 解码策略 | 可跨 token 复用（penalty 等需状态） |
+
+**关键参数**（`llama_context_params`）：
+
+| 参数 | 含义 |
+|------|------|
+| `n_ctx` | 最大上下文长度（KV cache 上限） |
+| `n_batch` | 单次 decode 最大 token 数（prefill 批量） |
+| `n_ubatch` | micro-batch 大小（内部分块） |
+| `n_seq_max` | 并行序列数（多用户/多 beam） |
+
+---
+
+## 6. 完整推理循环
+
+### 6.1 流程图
+
+```
+┌─────────────┐
+│ 用户 prompt │
+└──────┬──────┘
+       ▼
+┌──────────────────┐
+│ llama_tokenize() │  文本 → token ID 序列
+└──────┬───────────┘
+       ▼
+┌──────────────────────────────────────┐
+│ Prefill: llama_decode(ctx, batch)    │  batch = 整个 prompt
+│   → 写入 KV cache                    │  logits 通常不取
+└──────┬───────────────────────────────┘
+       ▼
+┌──────────────────────────────────────┐
+│ 循环直到 EOS 或 n_predict:           │
+│   1. llama_sampler_sample()          │  logits → 下一个 token
+│   2. llama_sampler_accept()          │  更新 repetition penalty 等
+│   3. llama_batch_get_one()           │  单 token batch
+│   4. llama_decode(ctx, batch)        │  更新 KV cache
+│   5. llama_token_to_piece()          │  可选：流式输出字符
+└──────┬───────────────────────────────┘
+       ▼
+┌──────────────────┐
+│ 完整回复文本      │
+└──────────────────┘
+```
+
+更完整的分层数据流见 [02-architecture.md](./02-architecture.md) 第 2 节。
+
+### 6.2 最小代码骨架
+
+与 `examples/simple/simple.cpp` 一致的核心逻辑：
+
+```c
+// 1. 加载
+llama_model * model = llama_model_load_from_file(path, model_params);
+llama_context * ctx = llama_init_from_model(model, ctx_params);
+
+// 2. 分词 + Prefill
+llama_tokenize(vocab, prompt, len, tokens, max, true, true);
+llama_batch batch = llama_batch_get_one(tokens, n_tokens);
+llama_decode(ctx, batch);
+
+// 3. Decode 循环
+for (int i = 0; i < n_predict; i++) {
+    llama_token id = llama_sampler_sample(sampler, ctx, -1);
+    if (llama_vocab_is_eog(vocab, id)) break;
+    llama_sampler_accept(sampler, id);
+
+    batch = llama_batch_get_one(&id, 1);
+    llama_decode(ctx, batch);
+    // detokenize id → 输出
+}
+```
+
+完整可编译示例见 [08-examples.md](./08-examples.md) 与 [11-api-reference.md](./11-api-reference.md) 第 3 节。
+
+### 6.3 `llama_decode` 内部做了什么（概要）
+
+每次 `llama_decode` 大致经过：
+
+1. **Batch 校验与补全**：自动填充 `pos`、`seq_id`、是否输出 `logits`
+2. **Memory 分配**：在 KV cache 中找 slot（失败返回 `1` = KV 满）
+3. **构建/复用计算图**：GGML 图描述矩阵乘、Attention 等算子
+4. **Backend 执行**：CPU/CUDA/Metal 等 kernel
+5. **写回 KV cache**：新 token 的 K/V 持久化
+
+源码级流程见 [15-decode-graph-reuse.md](./15-decode-graph-reuse.md)。
+
+---
+
+## 7. Logits 与采样
+
+### 7.1 Logits 是什么
+
+`llama_decode` 完成后，`llama_get_logits(ctx)` 返回长度为 `vocab_size` 的浮点数组——模型对**每个词表 token** 的未归一化得分。最后一个输入位置对应「下一个 token」的分布。
+
+```
+logits[token_id] 越大 → 该 token 越可能被选中
+```
+
+### 7.2 采样器链
+
+llama.cpp 用 **sampler chain** 把多个策略串联（类似 Unix 管道）：
+
+```
+原始 logits
+  → top_k (保留前 k 个)
+  → top_p (核采样)
+  → temperature (调节随机性)
+  → penalties (重复惩罚)
+  → dist (按概率随机抽取)
+  → 最终 token
+```
+
+常见策略：
+
+| 策略 | 行为 | 适用 |
+|------|------|------|
+| Greedy | 永远选 argmax | 确定性任务 |
+| top_k + top_p + temp | 随机但可控 | 对话、创作 |
+| Mirostat | 动态调节 perplexity | 质量稳定输出 |
+| Grammar (GBNF) | 约束合法 token 集 | JSON / 代码生成 |
+
+API 见 [11-api-reference.md](./11-api-reference.md) 第 2.6 节；`llama-server` 将相同参数暴露为 HTTP 字段。
+
+### 7.3 何时从 logits 采样
+
+- **Prefill 阶段**：batch 中多个 token 时，默认只对**最后一个**位置输出 logits（`balloc->init` 自动设置）
+- **Decode 阶段**：batch 只有 1 个 token，`llama_sampler_sample(sampler, ctx, -1)` 取最后一个（也是唯一）位置
+
+---
+
+## 8. Batch、并行与吞吐
+
+### 8.1 单序列 vs 多序列
+
+- **单用户对话**：通常 1 个 `seq_id`，decode 每步 1 token
+- **多用户服务**（`llama-server`）：多个 `seq_id` 在同一 `llama_context` 中交错 batch，提高 GPU 利用率——**连续批处理**（Continuous Batching）
+
+### 8.2 Micro-batch（ubatch）
+
+当 prefill 很长或并行序列很多时，一次 decode 可能含数百 token。`n_ubatch` 将其拆成更小块依次执行，避免峰值显存爆炸。见 [17-batch-system.md](./17-batch-system.md)。
+
+### 8.3 其他加速（概念）
+
+| 技术 | 原理 | llama.cpp 入口 |
+|------|------|----------------|
+| 投机解码 | 小模型 draft + 大模型验证 | `common/speculative.cpp`、`examples/speculative/` |
+| Flash Attention | 融合 attention kernel，省显存 | `flash_attn_type` |
+| 量化权重 | INT4/INT8 权重，减带宽 | GGUF Q4_K_M 等 |
+| Prompt lookup | N-gram 缓存跳过部分 prefill | `examples/lookup/` |
+
+---
+
+## 9. 与 vLLM 的概念对照
+
+若熟悉 [vLLM 文档](../vllmDoc/README.md)，可这样对应：
+
+| 概念 | llama.cpp | vLLM |
+|------|-----------|------|
+| 模型权重 | `llama_model` (GGUF) | `ModelRunner` + HF 权重 |
+| 运行时会话 | `llama_context` | `Request` + KV blocks |
+| Prefill / Decode | 同一 `llama_decode` | Scheduler 分 phase |
+| KV 存储 | `llama_kv_cache` cells | PagedAttention block pool |
+| 批处理 | `llama_batch` → `ubatch` | `Scheduler` + continuous batching |
+| 采样 | `llama_sampler` chain | `Sampler` / logits processors |
+| 服务入口 | `llama-server` | OpenAI API server |
+
+llama.cpp 偏**单进程嵌入式**与**多后端 CPU/GPU**；vLLM 偏**数据中心 GPU 批处理**。两者推理原理相同，工程取舍不同。
+
+---
+
+## 10. Encode-only 模式
+
+Embedding / Rerank / BERT 类模型**不做自回归**，只做一次前向：
+
+- `memory` 为 `nullptr`
+- `llama_decode` 退化为 `encode()` 路径
+- 输出为 `llama_get_embeddings()` 而非 logits
+
+见 [08-examples.md](./08-examples.md) embedding 示例。
+
+---
+
+## 11. 常见问题
+
+### Q1: Prefill 慢、Decode 快，正常吗？
+
+正常。Prefill 是「大矩阵乘」，decode 是「小矩阵乘 + 读 KV」，瓶颈不同。长 prompt 时首 token 延迟（TTFT）主要由 prefill 决定。
+
+### Q2: `llama_decode` 返回 `1` 是什么意思？
+
+KV cache 满了（`n_ctx` 不够或碎片无法分配）。可清理序列、缩短上下文，或增大 `n_ctx`。见 [16-kv-cache-memory.md](./16-kv-cache-memory.md)。
+
+### Q3: 多轮对话如何保持上下文？
+
+同一 `llama_context` 中不要 `llama_kv_cache_clear()`；新轮次的 prompt token 追加 decode 即可，KV cache 累积历史。`llama-server` 按 slot 管理会话。
+
+### Q4: 权重在 GPU、KV 在 CPU 可以吗？
+
+可以。`n_gpu_layers` 控制权重 offload；`offload_kqv` 控制 KV 是否放 GPU。混合配置用于显存不足时。
+
+---
+
+## 12. 推荐阅读路径
+
+| 目标 | 文档顺序 |
+|------|----------|
+| 会用 API | 本文 → [11-api-reference.md](./11-api-reference.md) → [08-examples.md](./08-examples.md) |
+| 懂内核 | 本文 → [03-src-core.md](./03-src-core.md) → [15](./15-decode-graph-reuse.md) → [16](./16-kv-cache-memory.md) → [17](./17-batch-system.md) |
+| 部署服务 | 本文 → [12-server.md](./12-server.md) → [06-common.md](./06-common.md) |
+| 对照 vLLM | 本文第 9 节 → [vLLM 05-kv-cache](../vllmDoc/05-kv-cache-paged-attention.md) |
+
+---
+
+## 13. 相关链接
+
+- [02-architecture.md](./02-architecture.md) — 分层架构与数据流
+- [15-decode-graph-reuse.md](./15-decode-graph-reuse.md) — decode 源码路径
+- [16-kv-cache-memory.md](./16-kv-cache-memory.md) — KV / Memory 实现
+- [17-batch-system.md](./17-batch-system.md) — batch 与连续批处理
+- 官方示例：`examples/simple/simple.cpp`

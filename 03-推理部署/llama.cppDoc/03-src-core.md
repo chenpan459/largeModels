@@ -13,6 +13,7 @@
 
 | 文档 | 专题 |
 |------|------|
+| [18-inference-principles.md](./18-inference-principles.md) | 推理原理（Prefill/Decode、KV Cache、采样） |
 | [14-model-loader-deep-dive.md](./14-model-loader-deep-dive.md) | GGUF 加载、create_tensor、mmap |
 | [15-decode-graph-reuse.md](./15-decode-graph-reuse.md) | decode 流程、图复用 can_reuse |
 | [16-kv-cache-memory.md](./16-kv-cache-memory.md) | KV cache 变体、Memory 工厂 |

@@ -29,7 +29,7 @@
 
 ## 2. 推理数据流
 
-> 详细分析见 [15-decode-graph-reuse.md](./15-decode-graph-reuse.md)、[16-kv-cache-memory.md](./16-kv-cache-memory.md)、[17-batch-system.md](./17-batch-system.md)
+> 概念入门见 [18-inference-principles.md](./18-inference-principles.md)；源码分析见 [15-decode-graph-reuse.md](./15-decode-graph-reuse.md)、[16-kv-cache-memory.md](./16-kv-cache-memory.md)、[17-batch-system.md](./17-batch-system.md)
 
 ```
 用户输入 (文本/图像)

@@ -104,6 +104,7 @@ llama.cpp/
 
 ## 7. 相关链接
 
+- [推理原理](./18-inference-principles.md) — Prefill/Decode、KV Cache、采样循环
 - [官方 README](https://github.com/ggml-org/llama.cpp/blob/master/README.md)
 - [构建指南](https://github.com/ggml-org/llama.cpp/blob/master/docs/build.md)
 - [libllama API Changelog](https://github.com/ggml-org/llama.cpp/issues/9289)
