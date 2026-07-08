@@ -2,147 +2,169 @@
 
 ## 1. 模块概述
 
+CPU Backend 是 **兜底 Backend**：`supports_op` 返回 true  for 全部算子，sched 中优先级最低。
+
 | 文件/目录 | 行数(约) | 职责 |
 |-----------|----------|------|
-| `src/ggml-cpu/ggml-cpu.cpp` | 703 | Backend 注册、入口 |
-| `src/ggml-cpu/ggml-cpu.c` | 3,840 | **`ggml_graph_compute`** 主循环 |
-| `src/ggml-cpu/ops.cpp` | 11,514 | 各 `ggml_op` CPU 实现 |
-| `src/ggml-cpu/quants.c` | 1,288 | SIMD 量化 kernel |
-| `src/ggml-cpu/repack.cpp` | 4,836 | 权重 repack |
-| `src/ggml-cpu/arch/x86/quants.c` | 6,596 | AVX/AVX512 |
-| `src/ggml-cpu/arch/arm/quants.c` | 3,970 | NEON/dotprod |
-| `src/ggml-cpu/amx/mmq.cpp` | 2,511 | Intel AMX |
-| `src/ggml-cpu/llamafile/sgemm.cpp` | 4,052 | 可选 fast GEMM |
-| `src/ggml-cpu/kleidiai/` | 1,523 | ARM KleidiAI |
+| `ggml-cpu.cpp` | 703 | Backend 注册、extra buffer types |
+| `ggml-cpu.c` | 3,840 | **`ggml_graph_compute`** 主循环 |
+| `ops.cpp` | 11,514 | 各 `ggml_op` CPU 实现 |
+| `quants.c` | 1,288 | SIMD vec_dot 调度 |
+| `repack.cpp` | 4,836 | 权重 repack |
+| `arch/x86/quants.c` | 6,596 | AVX/AVX512/VNNI |
+| `arch/arm/quants.c` | 3,970 | NEON/dotprod/i8mm |
+| `arch/riscv/quants.c` | — | RVV |
+| `amx/mmq.cpp` | 2,511 | Intel AMX INT8 |
+| `llamafile/sgemm.cpp` | 4,052 | 可选 F32 GEMM |
+| `kleidiai/` | 1,523 | ARM KleidiAI |
+| `spacemit/` | — | SpacemiT RISC-V 优化 |
+| `vec.cpp` | — | F32/F16/BF16 vec_dot |
+| `traits.h` | — | supports_op 抽象 |
 
-CPU Backend 是 **兜底 Backend**：支持全部算子，sched 中优先级最低。
-
----
-
-## 2. 执行入口
+## 2. 执行路径
 
 ```
 ggml_backend_cpu_graph_compute(backend, cgraph)
-    |
-    v
-ggml_graph_plan(cgraph, n_threads)   # 规划线程任务
-    |
-    v
-ggml_graph_compute(cplan)            # ggml-cpu.c L3308
-    |
-    v
+    ↓
+ggml_graph_plan(cgraph, n_threads)
+    ↓
+ggml_graph_compute(cplan)                    // ggml-cpu.c L3308
+    ↓
 for each node in cgraph->nodes:
-    dispatch -> ops.cpp 中对应函数
+    ggml_compute_forward(params, tensor)     // L1702, 大 switch
+    ↓
+ops.cpp 中 ggml_compute_forward_* 实现
 ```
 
----
+量化 matmul 路径：
+
+```
+ggml_compute_forward_mul_mat (ggml-cpu.c L1245+)
+  → 激活量化为 Q8
+  → 按 src0->type 选择 vec_dot 函数指针
+  → arch/*/quants.c SIMD 实现
+```
 
 ## 3. 线程模型
 
-| 机制 | CMake 选项 | 说明 |
-|------|-----------|------|
-| OpenMP | `GGML_OPENMP=ON` | 默认，节点内并行 |
-| 手动线程池 | `ggml_graph_plan.n_threads` | llama.cpp 设 `n_threads` |
+| 机制 | CMake / API | 说明 |
+|------|-------------|------|
+| OpenMP | `GGML_OPENMP=ON` | 节点内 `#pragma omp parallel` |
+| Threadpool | `ggml-threading.cpp` | `ggml_threadpool_new`、affinity |
+| 手动 | `cplan.n_threads` | llama `-t N` |
 | NUMA | `ggml_numa_init()` | 多 socket 绑定 |
 
----
+Threadpool 支持 cpumask、disposable threadpool（短生命周期任务）。
 
-## 4. SIMD 架构支持
+## 4. Arch 目录结构
 
-### 4.1 x86
+```
+ggml-cpu/arch/
+├── x86/       quants.c, repack.cpp, cpu-feats.cpp
+├── arm/       quants.c, repack.cpp, cpu-feats.cpp
+├── riscv/     quants.c, repack.cpp, cpu-feats.cpp
+├── powerpc/   quants.c, cpu-feats.cpp
+├── s390/      quants.c
+├── loongarch/ quants.c
+└── wasm/      quants.c
+```
+
+`cpu-feats.cpp`：运行时 ISA 检测；配合 `GGML_CPU_ALL_VARIANTS` + `GGML_BACKEND_DL` 选择最优 CPU 变体（haswell、skylake、apple_m4、riscv64_v 等）。
+
+## 5. SIMD / ISA 支持
+
+### x86
 
 | ISA | CMake | 用途 |
 |-----|-------|------|
-| AVX | `GGML_AVX` | 基础 SIMD |
-| AVX2 | `GGML_AVX2` | 256-bit |
+| AVX / AVX2 | `GGML_AVX` / `GGML_AVX2` | 256-bit SIMD |
 | AVX512 | `GGML_AVX512` | 512-bit |
 | AVX512_VNNI | — | int8 dot product |
-| AMX | `GGML_AMX_*` | int8 矩阵乘 |
+| AMX INT8 | `GGML_AMX_INT8` | `amx/mmq.cpp` |
+| AMX BF16 | `GGML_AMX_BF16` | BF16 矩阵乘 |
 
-### 4.2 ARM
+AMX 条件：`__AMX_INT8__ && __AVX512VNNI__`（`amx/mmq.cpp` L35+）。
+
+### ARM
 
 | ISA | 说明 |
 |-----|------|
-| NEON | 基础 128-bit SIMD |
-| dotprod | int8 点积加速 |
+| NEON | 128-bit SIMD |
+| dotprod | int8 点积 |
 | i8mm | int8 矩阵乘 |
 | SVE | 可变长向量 |
-| KleidiAI | `GGML_CPU_KLEIDIAI` 优化库 |
+| KleidiAI | `GGML_CPU_KLEIDIAI` 优化库 + 专用 buffer type |
 
-### 4.3 RISC-V
+### RISC-V
 
 | ISA | 说明 |
 |-----|------|
 | RVV | 向量扩展 |
 | ZVFH | FP16 向量 |
+| SpacemiT | `spacemit/` 专用 repack + quants |
 
----
+## 6. Extra Buffer Types
 
-## 5. Repack（`GGML_CPU_REPACK`）
+`ggml_backend_cpu_get_extra_buffer_types()`（`ggml-cpu.cpp` L42-66）：
 
-运行时将 Q4_0 权重转为 CPU 友好 layout（Q4_X_X）：
+| Buffer Type | 触发 | 效果 |
+|-------------|------|------|
+| repack | `GGML_CPU_REPACK=ON` | Q4_0→Q4_X layout，matmul 加速 |
+| KleidiAI | `GGML_CPU_KLEIDIAI` | ARM 优化 buffer |
+| SpacemiT | RISC-V SpacemiT | RVV 优化 repack |
 
-```
-GGUF Q4_0 weights
-    |
-    v
-repack.cpp (加载时或首次 matmul)
-    |
-    v
-Q4_X_X layout (更适合 SIMD 访问)
-    |
-    v
-arch/quants.c 加速 matmul
-```
+加载权重到 repack buffer 时在 `init_tensor` 中自动 repack。
 
-权衡：加载时间增加，推理 matmul 更快。
-
----
-
-## 6. Llamafile SGEMM（`GGML_LLAMAFILE`）
-
-`llamafile/sgemm.cpp`：多线程 SGEMM 实现，F16/F32 矩阵乘 fallback。
-
----
-
-## 7. CPU 变体（`GGML_CPU_ALL_VARIANTS`）
-
-构建多个 ISA 变体库（haswell, skylakex, icelake, apple_m4 等），运行时 `dlopen` 选最优：
+## 7. 量化 kernel 层次
 
 ```
-GGML_BACKEND_DL=ON + GGML_CPU_ALL_VARIANTS=ON
-    |
-    v
-libggml-cpu-haswell.so
-libggml-cpu-skylakex.so
-libggml-cpu-apple_m4.so
-    |
-    v
-运行时检测 CPU -> 加载最优变体
+ggml-quants.c           参考 dequant/quant（工具用）
+    ↓
+ggml-cpu/quants.c       调度层
+    ↓
+arch/x86/quants.c       AVX512 VNNI vec_dot_q4_K_q8_K
+arch/arm/quants.c       NEON dotprod
+arch/riscv/quants.c     RVV
 ```
 
----
+完整 vec_dot 列表见 `ggml-cpu/quants.h` L40-67（30+ 组合）。
 
-## 8. `supports_op`
+## 8. F32 矩阵乘
 
-CPU Backend **支持全部算子**，作为 sched 的最后 fallback。当 GPU 不支持某 op 时，该节点落回 CPU。
+| 路径 | 条件 |
+|------|------|
+| llamafile SGEMM | `GGML_LLAMAFILE=ON` |
+| BLAS | `GGML_BLAS=ON`（OpenBLAS/MKL/Accelerate） |
+| 纯 C | ops.cpp 朴素实现 |
 
----
+## 9. supports_op
 
-## 9. 性能调优
+CPU Backend **支持全部** `ggml_op`（包括训练 `OPT_STEP_*`、新 op `GATED_DELTA_NET` 等）。
 
-| 参数/选项 | 效果 |
-|-----------|------|
-| `n_threads` | 并行度（llama.cpp `--threads`） |
-| `GGML_NATIVE=ON` | 针对本机 CPU 编译优化 |
-| `GGML_CPU_REPACK=ON` | 量化 matmul 加速 |
-| `GGML_LLAMAFILE=ON` | F32 GEMM 加速 |
-| `GGML_AMX_*` | Intel Sapphire Rapids+ AMX |
+sched 中 CPU 为最低优先级；仅当 GPU 不支持或权重在 CPU buffer 时使用。
 
----
+## 10. 性能调优
 
-## 10. 相关文档
+| 目标 | 方法 |
+|------|------|
+| 量化推理 | Q4_K 模型 + `GGML_CPU_REPACK` |
+| x86 吞吐 | AVX512_VNNI + AMX（Xeon） |
+| Apple | KleidiAI buffer |
+| 线程 | `-t` 设为物理核数；NUMA 绑定 |
+| 调试 | `GGML_DEBUG=1` 打印 node 执行 |
 
-- [06-quantization.md](./06-quantization.md) - CPU 量化 kernel
-- [09-backend-gpu.md](./09-backend-gpu.md) - GPU vs CPU 分工
-- [11-build-system.md](./11-build-system.md) - CPU ISA CMake 选项
+## 11. 扩展新 op
+
+1. `ggml.h` 添加 `GGML_OP_XXX`
+2. `ggml.c` 添加工厂函数
+3. `ops.cpp` 实现 `ggml_compute_forward_xxx`
+4. `ggml-cpu.c` 的 switch 注册
+5. `tests/test-backend-ops.cpp` 添加测试
+
+GPU Backend 可选实现；CPU 必须实现。
+
+## 相关文档
+
+- [06-quantization.md](./06-quantization.md)
+- [11-build-system.md](./11-build-system.md)
+- [14-ggml-opt-threading.md](./14-ggml-opt-threading.md)

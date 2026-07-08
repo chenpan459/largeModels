@@ -2,7 +2,7 @@
 
 ## 1. 概览
 
-除 CPU/CUDA/Metal/Vulkan 外，GGML 还支持多种专用 Backend：
+除 CPU/CUDA/Metal/Vulkan 外，GGML 支持多种专用 Backend：
 
 | Backend | 目录 | 平台 | CMake |
 |---------|------|------|-------|
@@ -11,49 +11,54 @@
 | MUSA | 共用 `ggml-cuda/` | 摩尔线程 | `GGML_MUSA` |
 | OpenCL | `ggml-opencl/` | 通用 GPU | `GGML_OPENCL` |
 | RPC | `ggml-rpc/` | 远程 GPU | `GGML_RPC` |
-| WebGPU | `ggml-webgpu/` | 浏览器 | `GGML_WEBGPU` |
+| WebGPU | `ggml-webgpu/` | 浏览器/Dawn | `GGML_WEBGPU` |
+| VirtGPU | `ggml-virtgpu/` | 虚拟 GPU | `GGML_VIRTGPU` |
 | Hexagon | `ggml-hexagon/` | 高通 NPU | `GGML_HEXAGON` |
 | CANN | `ggml-cann/` | 华为 Ascend | `GGML_CANN` |
 | OpenVINO | `ggml-openvino/` | Intel 推理 | `GGML_OPENVINO` |
-| BLAS | `ggml-blas/` | BLAS 加速 | `GGML_BLAS` |
+| BLAS | `ggml-blas/` | BLAS 加速 F32 GEMM | `GGML_BLAS` |
 | ZenDNN | `ggml-zendnn/` | AMD CPU | `GGML_ZENDNN` |
 | zDNN | `ggml-zdnn/` | IBM Z | `GGML_ZDNN` |
-| VirtGPU | `ggml-virtgpu/` | 虚拟 GPU | — |
+
+注册顺序见 [04-backend-scheduler.md](./04-backend-scheduler.md)；CPU 始终最后。
 
 ---
 
 ## 2. SYCL（Intel GPU）
 
-- 目录：`src/ggml-sycl/`
+- 目录：`src/ggml-sycl/`（多 .cpp/.hpp）
 - 支持 Intel Arc、Data Center GPU
 - 部分 kernel 从 CUDA 移植
-- CMake：`GGML_SYCL=ON`，需 oneAPI
+- CMake：`GGML_SYCL=ON`，需 oneAPI 工具链
+- 与 CUDA 类似：`supports_op` 白名单 + 量化 kernel
 
 ---
 
 ## 3. HIP / MUSA（AMD / 摩尔线程）
 
-- **共用 CUDA 源码**：`ggml-cuda/` 通过 HIPify 或 MUSA 工具链编译
-- CMake：`GGML_HIP=ON` 或 `GGML_MUSA=ON`
-- API 与 CUDA Backend 一致，注册名不同
+- **共用 CUDA 源码树** `ggml-cuda/`
+- HIPify 或 MUSA 编译器生成对应代码
+- CMake：`GGML_HIP=ON` / `GGML_MUSA=ON`
+- API 与 CUDA Backend 一致，注册名 `HIP` / `MUSA`
+- 环境变量与 CUDA 类似（force mmq 等）
 
 ---
 
 ## 4. RPC Backend
 
-远程 GPU 推理：
+远程 GPU 推理架构：
 
 ```
-本地 llama.cpp
-    |
-    v
-ggml-rpc backend -> TCP/网络
-    |
-    v
-远程机器 ggml-rpc server (GPU)
+本地 llama-cli (CPU 或无 GPU)
+    ↓
+ggml-rpc client backend
+    ↓ TCP/网络
+远程 ggml-rpc server (绑定本地 CUDA/Metal)
+    ↓
+GPU graph_compute
 ```
 
-用途：本地 CPU 机器调用远程 GPU 服务器推理。
+用途：轻量客户端调用远程 GPU 服务器。
 
 CMake：`GGML_RPC=ON`
 
@@ -62,56 +67,75 @@ CMake：`GGML_RPC=ON`
 ## 5. WebGPU
 
 - 目录：`src/ggml-webgpu/`
-- WGSL shader（`wgsl-shaders/*.wgsl`）
-- 目标：浏览器/WASM 环境
+- WGSL shader：`wgsl-shaders/`（100+ 文件，与 Vulkan 算子对应）
+- `embed_wgsl.py`：shader 嵌入
+- 目标：浏览器 WASM、Dawn runtime
 - CMake：`GGML_WEBGPU=ON`
 
+算子覆盖：mul_mat、flash_attn、rope、quantize、ssm 等。
+
 ---
 
-## 6. Hexagon（高通 NPU）
+## 6. VirtGPU（虚拟 GPU）
+
+- 目录：`src/ggml-virtgpu/`
+- **前后端分离**：
+  - `GGML_VIRTGPU`：客户端 Backend
+  - `GGML_VIRTGPU_BACKEND`：服务端
+- 用于虚拟化/远程 GPU 抽象层
+
+---
+
+## 7. Hexagon（高通 NPU）
 
 - 目录：`src/ggml-hexagon/`
-- 高通骁龙 NPU 加速
+- 骁龙 NPU（QNN SDK）
 - CMake：`GGML_HEXAGON=ON`
-- 需 QNN SDK
+- 移动端/边缘推理
 
 ---
 
-## 7. CANN（华为 Ascend）
+## 8. CANN（华为 Ascend）
 
 - 目录：`src/ggml-cann/`
-- 华为昇腾 NPU
+- 昇腾 NPU ACL 接口
 - CMake：`GGML_CANN=ON`
 
 ---
 
-## 8. BLAS
+## 9. OpenVINO / BLAS / ZenDNN / zDNN
 
-- 目录：`src/ggml-blas/`
-- 调用 OpenBLAS/MKL/Apple Accelerate
-- 加速 F32 `MUL_MAT`
-- CMake：`GGML_BLAS=ON`
+| Backend | 说明 |
+|---------|------|
+| OpenVINO | Intel CPU/GPU 推理引擎集成 |
+| BLAS | OpenBLAS/MKL/Accelerate 加速 CPU F32 `MUL_MAT` |
+| ZenDNN | AMD CPU 优化库 |
+| zDNN | IBM Z 大型机 AI 加速 |
 
 ---
 
-## 9. Backend 动态加载
+## 10. Backend 动态加载
 
-`GGML_BACKEND_DL=ON` 时，Backend 编译为独立 `.so`：
+`GGML_BACKEND_DL=ON`：
 
 ```
-libggml-cpu.so
+libggml-base.so
+libggml.so
+libggml-cpu.so      ← MODULE 插件
 libggml-cuda.so
-libggml-metal.so
-    |
-    v
-ggml_backend_load_all()  # 扫描可执行文件目录
+libggml-metal.dylib
+    ↓
+ggml_backend_load_all()   # 扫描可执行文件目录
+ggml_backend_init_best()  # 优先 GPU
 ```
 
-好处：主程序不链接所有 Backend，按需加载。
+好处：主程序不静态链接全部 Backend；按需 dlopen。
+
+配合 `GGML_CPU_ALL_VARIANTS`：多 ISA CPU 变体（haswell、apple_m4…）独立 .so。
 
 ---
 
-## 10. 选择建议
+## 11. 选择建议
 
 | 硬件 | 推荐 Backend |
 |------|-------------|
@@ -119,16 +143,18 @@ ggml_backend_load_all()  # 扫描可执行文件目录
 | Apple Silicon | Metal |
 | AMD GPU | HIP (ROCm) |
 | Intel GPU | SYCL 或 Vulkan |
-| 通用 GPU | Vulkan |
-| 仅 CPU | CPU (+ BLAS 可选) |
+| 通用 GPU / Linux | Vulkan |
+| 仅 CPU | CPU（+ BLAS 可选） |
 | 远程 GPU | RPC |
 | 华为 Ascend | CANN |
 | 高通手机 | Hexagon |
+| 浏览器 | WebGPU |
 
 ---
 
-## 11. 相关文档
+## 相关文档
 
-- [04-backend-scheduler.md](./04-backend-scheduler.md) - 多 Backend 调度
-- [09-backend-gpu.md](./09-backend-gpu.md) - 主流 GPU Backend
-- [11-build-system.md](./11-build-system.md) - 全部 CMake 选项
+- [04-backend-scheduler.md](./04-backend-scheduler.md)
+- [09-backend-gpu.md](./09-backend-gpu.md)
+- [15-metal-vulkan-deep.md](./15-metal-vulkan-deep.md)
+- [11-build-system.md](./11-build-system.md)

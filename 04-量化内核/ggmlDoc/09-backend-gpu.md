@@ -4,161 +4,190 @@
 
 | Backend | 主文件 | 行数(约) | 平台 |
 |---------|--------|----------|------|
-| CUDA | `ggml-cuda/ggml-cuda.cu` | 5,721 | NVIDIA |
-| Metal | `ggml-metal/ggml-metal.cpp` + `.metal` | 950 + 10,754 | Apple |
+| CUDA | `ggml-cuda/ggml-cuda.cu` | 5,721 + 65 .cu | NVIDIA |
+| HIP / MUSA | 共用 `ggml-cuda/` | — | AMD / 摩尔线程 |
+| Metal | `ggml-metal/` 多文件 | ~20k+ | Apple |
 | Vulkan | `ggml-vulkan/ggml-vulkan.cpp` | 18,696 | 跨平台 GPU |
 
-HIP（AMD）和 MUSA（摩尔线程）共用 CUDA 目录，CMake 别名编译。
+HIP/MUSA 通过 CMake 别名编译同一源码树，注册名不同。
 
 ---
 
 ## 2. CUDA Backend
 
-### 2.1 目录结构（~80 `.cu` 文件）
+### 2.1 .cu 文件分类（65 个）
 
-| 文件 | 职责 |
+| 类别 | 文件 |
 |------|------|
-| `ggml-cuda.cu` | 设备管理、buffer、supports_op、注册 |
-| `mmq.cu` | 量化矩阵乘（MMQ） |
-| `mmvq.cu` | 量化 mat-vec |
-| `fattn.cu`, `fattn-*.cu` | Flash Attention 系列 |
-| `rope.cu` | RoPE |
-| `norm.cu` | RMSNorm/LayerNorm |
-| `softmax.cu` | Softmax |
-| `cpy.cu` | 拷贝 |
-| `allreduce.cu` | 多卡 NCCL |
-| `quantize.cu` | 量化工具 |
+| 矩阵乘 | `mmq.cu`, `mmvq.cu`, `mmvf.cu`, `mmf.cu`, `mmid.cu` |
+| Flash Attn | `fattn.cu`, `fattn-tile.cu`, `fattn-wmma-f16.cu` |
+| 归一化/激活 | `norm.cu`, `softmax.cu`, `unary.cu` |
+| 位置编码 | `rope.cu` |
+| MoE | `topk-moe.cu`, `mmid.cu` |
+| 状态空间 | `ssm-scan.cu`, `ssm-conv.cu`, `gated_delta_net.cu`, `gla.cu` |
+| 卷积 | `conv2d*.cu`, `im2col.cu`, `pool2d.cu` |
+| RWKV | `wkv.cu` |
+| 拷贝/量化 | `cpy.cu`, `convert.cu`, `quantize.cu` |
+| 多卡 | `allreduce.cu`（NCCL，`GGML_CUDA_NCCL`） |
+| 训练 | `opt-step*.cu` |
 
-### 2.2 注册与初始化
+### 2.2 上下文结构
 
-```c
-ggml_backend_reg_t reg = ggml_backend_cuda_reg();  // L5650
-ggml_backend_dev_t dev = ggml_backend_reg_dev_get(reg, gpu_id);
-ggml_backend_t backend = ggml_backend_dev_init(dev, NULL);
+`ggml-cuda.cu`：
+
+- `ggml_backend_cuda_context`：device、cublas handle、memory pool
+- `ggml_backend_cuda_buffer_context`：VRAM buffer（L626+）
+- `tensor->extra`：CUDA tensor 私有元数据
+
+### 2.3 MUL_MAT 路由（L2541-2621）
+
+```
+n_dims==2 且 vec case:
+  quant → mmvq (ggml_cuda_mul_mat_vec_q)
+  float → mmvf
+
+else quant:
+  → mmq (ggml_cuda_mul_mat_q)
+
+else float batched:
+  → cublas (ggml_cuda_mul_mat_batched_cublas)
 ```
 
-### 2.3 关键特性
+强制开关：
 
-| 特性 | CMake/环境 | 说明 |
-|------|-----------|------|
-| MMQ | 默认 | 量化 matmul 主力 |
-| cuBLAS fallback | `GGML_CUDA_FORCE_CUBLAS` | 强制 cuBLAS |
-| MMQ 强制 | `GGML_CUDA_FORCE_MMQ` | 强制自定义 kernel |
-| Flash Attention | `GGML_CUDA_FA` | FA CUDA kernel |
-| CUDA Graph | `GGML_CUDA_GRAPHS` | 减少 launch 开销 |
-| Multi-GPU | split buffer | 仅 `MUL_MAT` tensor parallel |
-| Pinned memory | 默认 | 加速 H2D 拷贝 |
+- `GGML_CUDA_FORCE_MMQ=1`
+- `GGML_CUDA_FORCE_CUBLAS=1`
 
-### 2.4 `supports_op` 限制
+### 2.4 Flash Attention
 
-- tensor 必须在对应 GPU 的 buffer 上
-- split buffer 模式仅支持 `MUL_MAT`
-- 部分 op 需特定 CUDA 版本或 GPU 架构
+| 选项 | 说明 |
+|------|------|
+| `GGML_CUDA_FA=ON` | 默认启用 |
+| `GGML_CUDA_FA_ALL_QUANTS` | 全部量化类型 FA kernel |
+| `fattn-tile.cu` | tile 变体 |
+| `fattn-wmma-f16.cu` | WMMA FP16 |
 
----
-
-## 3. Metal Backend
-
-### 3.1 文件结构
-
-| 文件 | 行数 | 职责 |
-|------|------|------|
-| `ggml-metal.cpp` | 950 | Backend 注册 |
-| `ggml-metal-device.cpp/.m` | 2086/1900 | MTLDevice/Buffer/Queue |
-| `ggml-metal-ops.cpp` | 4,633 | 算子 dispatch -> shader |
-| `ggml-metal.metal` | 10,754 | 全部 GPU kernel |
-
-### 3.2 特性
+### 2.5 其他特性
 
 | 特性 | 说明 |
 |------|------|
-| 默认开启 | macOS `GGML_METAL_DEFAULT ON` |
-| Embed library | `GGML_METAL_EMBED_LIBRARY` shader 嵌入二进制 |
-| offload 阈值 | `offload_op`: batch < 阈值不 offload |
-| Buffer 类型 | Shared/Private/Mapped |
-| Apple Silicon | M1/M2/M3/M4 优化 |
+| CUDA Graph | `GGML_CUDA_GRAPHS`（llama.cpp only） |
+| VMM | `GGML_CUDA_NO_VMM` 禁用 |
+| Pinned host | 默认启用，加速 H2D |
+| Multi-GPU split | 仅 `MUL_MAT` / `MUL_MAT_ID` |
+| NCCL | `GGML_CUDA_NCCL` 多卡 allreduce |
 
-### 3.3 `offload_op`
+### 2.6 supports_op 限制（L5054+）
 
-Metal 对小 batch 的 `MUL_MAT` 可能不 offload 到 GPU（CPU 更快），通过 `ggml_backend_dev_offload_op` 判断。
+- tensor 必须在对应 GPU 的 CUDA buffer
+- split buffer **仅** `MUL_MAT` / `MUL_MAT_ID`
+- 大量 op 要求 contiguous
+- UNARY/GLU 按子类型白名单
+- 部分 op 需特定 SM 版本
+
+---
+
+## 3. Metal Backend（多文件架构）
+
+Metal 已从单文件重构为分层结构：
+
+| 文件 | 职责 |
+|------|------|
+| `ggml-metal.cpp` | Backend 注册、buffer 接口 |
+| `ggml-metal-device.cpp/.m` | MTLDevice/Buffer/Queue |
+| `ggml-metal-context.m` | 渲染/计算上下文 |
+| `ggml-metal-ops.cpp` | 算子 dispatch → pipeline（L201 supports_op） |
+| `ggml-metal-common.cpp` | 公共工具 |
+| `ggml-metal.metal` | 全部 MSL kernel（~10,754 行） |
+
+### 特性
+
+| 特性 | 说明 |
+|------|------|
+| macOS 默认 | `GGML_METAL_DEFAULT ON` |
+| Embed shader | `GGML_METAL_EMBED_LIBRARY` 嵌入二进制 |
+| offload 阈值 | `ggml_backend_metal_device_offload_op()`：小 batch 不 offload |
+| Buffer 类型 | Shared / Private / Mapped |
+| 多设备 | `GGML_METAL_DEVICES` 环境变量 |
+
+接口：
+
+- `ggml_metal_device_supports_op()`（`ggml-metal-device.m` L1051）
+
+详见 [15-metal-vulkan-deep.md](./15-metal-vulkan-deep.md)。
 
 ---
 
 ## 4. Vulkan Backend
 
-### 4.1 结构
+### 主实现
 
-单体大文件 `ggml-vulkan.cpp`（18,696 行）+ 100+ compute shader：
+`ggml-vulkan.cpp`（~18,696 行）：device、buffer、pipeline、dispatch。
 
-```
-vulkan-shaders/
-├── mul_mat*.comp
-├── flash_attn*.comp
-├── rope.comp
-├── norm.comp
-├── softmax.comp
-└── ...
-```
+### Shader 目录
 
-`vulkan-shaders-gen.cpp`：编译期生成 shader 变体（量化类型 x tile size）。
+`src/ggml-vulkan/vulkan-shaders/`（132+ 文件）：
 
-### 4.2 特性
+| 类别 | 文件示例 |
+|------|----------|
+| 矩阵乘 | `mul_mm*.comp`, `mul_mmq.comp` |
+| Mat-vec | `mul_mat_vec_q4_k.comp`, `mul_mat_vec_iq2_xxs.comp` |
+| Flash Attn | `flash_attn*.comp`, `flash_attn_cm2.comp` |
+| Dequant | `dequant_q4_k.comp`, ... |
+| RoPE | `rope_neox.comp`, `rope_multi.comp`, `rope_norm.comp` |
+| 共享 | `types.glsl`, `utils.glsl`, `rope_funcs.glsl` |
 
-| 特性 | 说明 |
-|------|------|
-| 跨平台 | Linux/Windows/Android GPU |
-| 运行时 specialization | 量化类型 x tile size 组合 |
-| BDA | Buffer Device Address 大 tensor |
-| 禁用 | `GGML_DISABLE_VULKAN=1` 环境变量 |
+### Shader 生成器
+
+`vulkan-shaders-gen.cpp`：
+
+- 用 `glslc` 编译 `.comp` → SPIR-V
+- `type_names[]`（L49-75）：25 种量化/浮点类型 Cartesian 积
+- `MatMulIdType`：DEFAULT/SUBGROUP 等变体
+- 输出 `ggml-vulkan-shaders.hpp` 嵌入二进制
+- `ASYNCIO_CONCURRENCY=64` 并行编译
+
+运行时：`GGML_DISABLE_VULKAN=1` 可禁用。
+
+详见 [15-metal-vulkan-deep.md](./15-metal-vulkan-deep.md)。
 
 ---
 
-## 5. Backend 对比
+## 5. HIP / MUSA
 
-| 维度 | CUDA | Metal | Vulkan |
+- **共用** `ggml-cuda/` 源码
+- CMake：`GGML_HIP=ON` 或 `GGML_MUSA=ON`
+- HIPify 或 MUSA 工具链编译
+- API 与 CUDA 一致，注册名 `HIP` / `MUSA`
+
+---
+
+## 6. 跨 Backend 对照
+
+| 能力 | CUDA | Metal | Vulkan |
 |------|------|-------|--------|
-| 默认 | OFF | macOS ON | OFF |
-| 量化 matmul | MMQ/MMVQ | metal shader | comp shader |
-| Flash Attn | fattn*.cu | metal | flash_attn*.comp |
-| 多卡 | NCCL split | 有限 | 有限 |
-| 代码组织 | 按 op 分文件 | cpp + 大 .metal | 单体 cpp |
-| 成熟度 | 最高 | Apple 优 | 快速发展 |
+| 量化 MM | mmq.cu | .metal shader | mul_mmq.comp |
+| Flash Attn | fattn*.cu | .metal | flash_attn*.comp |
+| RoPE | rope.cu | .metal | rope_*.comp |
+| Shader 语言 | CUDA C++ | MSL | GLSL → SPIR-V |
+| 编译时 | nvcc | metallib | glslc + gen |
 
 ---
 
-## 6. GPU 内存管理
+## 7. 性能调优
 
-```
-ggml_backend_buft_alloc_buffer(buft, size)
-    |
-    v
-ggml_backend_buffer (GPU VRAM)
-    |
-    +-- USAGE_WEIGHTS: 模型权重（持久）
-    +-- USAGE_COMPUTE: 中间激活（图内复用）
-    |
-    v
-ggml_backend_tensor_copy(src, dst)  # 跨 Backend 拷贝
-```
-
-llama.cpp：`n_gpu_layers` 控制前 N 层权重分配到 GPU buffer。
+| 目标 | CUDA | Metal | Vulkan |
+|------|------|-------|--------|
+| 量化推理 | Q4_K + MMQ | Q4_K 模型 | Q4_K 模型 |
+| Flash Attn | `-fa on` + FA | `-fa on` | `-fa on` |
+| 小 batch | MMVQ | offload 阈值 | mat-vec shader |
+| 多 GPU | tensor-split | 有限 | 有限 |
+| 调试 | `--verbose` | `GGML_METAL_DEBUG` | `GGML_VULKAN_DEBUG` |
 
 ---
 
-## 7. llama.cpp GPU 参数
+## 相关文档
 
-| 参数 | 效果 |
-|------|------|
-| `-ngl N` / `n_gpu_layers` | 前 N 层 offload 到 GPU |
-| `--tensor-split` | 多卡负载比例 |
-| `-fa on` | Flash Attention |
-| `--no-mmap` | 禁用 mmap，直接读入 GPU |
-
----
-
-## 8. 相关文档
-
-- [04-backend-scheduler.md](./04-backend-scheduler.md) - GPU 在 sched 中的分配
-- [06-quantization.md](./06-quantization.md) - GPU 量化 kernel
-- [10-other-backends.md](./10-other-backends.md) - SYCL/HIP 等
-- [11-build-system.md](./11-build-system.md) - GPU CMake 选项
+- [06-quantization.md](./06-quantization.md)
+- [15-metal-vulkan-deep.md](./15-metal-vulkan-deep.md)
+- [11-build-system.md](./11-build-system.md)

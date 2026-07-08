@@ -7,216 +7,238 @@
 | `include/ggml.h` | ~2,863 | 公共 API、枚举、结构体 |
 | `src/ggml.c` | ~7,815 | 张量创建、算子工厂、图构建 |
 | `src/ggml.cpp` | ~26 | C++ 异常/backtrace 钩子 |
-| `src/ggml-impl.h` | — | 内部结构（context, cgraph, object） |
+| `src/ggml-impl.h` | — | 内部结构（context、cgraph、object、hash_set） |
 
----
+## 2. 关键常量（`ggml.h`）
 
-## 2. 核心数据结构
+```c
+#define GGML_MAX_DIMS      4
+#define GGML_MAX_SRC       10      // 每算子最多 10 个输入
+#define GGML_MAX_OP_PARAMS 64      // int32_t 数组（非结构体）
+#define GGML_MAX_NAME      64
+#define GGML_MEM_ALIGN     16      // x86_64；wasm 为 8
+```
 
-### 2.1 `struct ggml_tensor`
+## 3. `struct ggml_tensor`
 
 ```c
 struct ggml_tensor {
-    enum ggml_type type;           // F32, Q4_K, ...
+    enum ggml_type type;
     struct ggml_backend_buffer * buffer;
-    int64_t ne[GGML_MAX_DIMS];     // 维度大小 [d0,d1,d2,d3]
+    int64_t ne[GGML_MAX_DIMS];     // 维度 [d0,d1,d2,d3]
     size_t  nb[GGML_MAX_DIMS];     // stride（字节）
-    enum ggml_op op;               // 产生此张量的算子
+    enum ggml_op op;
     int32_t op_params[GGML_MAX_OP_PARAMS / sizeof(int32_t)];
-    int32_t flags;                   // INPUT/OUTPUT/PARAM/LOSS
-    struct ggml_tensor * src[GGML_MAX_SRC];  // 输入张量（最多 10 个）
-    struct ggml_tensor * view_src;  // view 的源张量
+    int32_t flags;                 // INPUT/OUTPUT/PARAM/LOSS/COMPUTE
+    struct ggml_tensor * src[GGML_MAX_SRC];
+    struct ggml_tensor * view_src;
     size_t view_offs;
-    void * data;                   // 数据指针
+    void * data;
     char name[GGML_MAX_NAME];
-    void * extra;                  // Backend 私有扩展
+    void * extra;                  // Backend 私有（CUDA extras 等）
 };
 ```
 
-### 2.2 `enum ggml_type`（42 种）
+### 张量 Flag
 
-| 类别 | 类型 | 说明 |
-|------|------|------|
-| 浮点 | F32, F16, BF16 | 标准浮点 |
-| 4-bit | Q4_0, Q4_1, Q4_K, Q4_K_S, Q4_K_M, Q4_K_L | block=32 或 super-block |
-| 5-bit | Q5_0, Q5_1, Q5_K_* | |
-| 8-bit | Q8_0, Q8_1, Q8_K | |
-| 2-bit | Q2_K, Q3_K_* | K-quants |
-| 1-bit | IQ1_*, IQ2_*, TQ1_0 | Importance/Ternary |
-| FP4 | MXFP4, NVFP4 | 新浮点4bit |
+| Flag | 含义 | 调度/分配影响 |
+|------|------|---------------|
+| `GGML_TENSOR_FLAG_INPUT` | 用户输入 | 默认落最后 Backend（通常 CPU） |
+| `GGML_TENSOR_FLAG_OUTPUT` | 输出节点 | gallocr **永不覆盖** |
+| `GGML_TENSOR_FLAG_PARAM` | 可训练参数 | ggml-opt 使用 |
+| `GGML_TENSOR_FLAG_LOSS` | 损失节点 | 反向传播起点 |
+| `GGML_TENSOR_FLAG_COMPUTE` | 中间计算标记 | 调度 hint |
 
-**兼容性原则**（`ggml.h` 注释）：新类型只在 enum 末尾追加，保证 GGUF 向后兼容。
+## 4. `enum ggml_type`（42 种）
 
-### 2.3 `enum ggml_op`（88 种）
+| 类别 | 类型 |
+|------|------|
+| 浮点 | F32, F16, BF16 |
+| 标准 block | Q4_0, Q4_1, Q5_0, Q5_1, Q8_0, Q8_1, **Q1_0** |
+| K-quants | Q2_K, Q3_K, Q4_K, Q5_K, Q6_K, Q8_K（super-block=256） |
+| Importance | IQ1_*, IQ2_*, IQ3_*, IQ4_* |
+| Ternary | TQ1_0, TQ2_0 |
+| FP4 | MXFP4, NVFP4 |
 
-分类概览：
+**兼容性原则**：新类型只在 enum 末尾追加；旧 GGUF 仍可读。
 
-| 类别 | 代表算子 |
-|------|----------|
-| 一元 | `UNARY` (ABS/NEG/SILU/GELU/...) |
-| 二元 | `ADD`, `SUB`, `MUL`, `DIV`, `MUL_MAT` |
-| 归约 | `SUM`, `SUM_ROWS`, `MEAN`, `ARGMAX` |
-| 形状 | `RESHAPE`, `VIEW`, `PERMUTE`, `TRANSPOSE`, `CONT` |
-| 归一化 | `RMS_NORM`, `LAYER_NORM`, `GROUP_NORM` |
-| 注意力 | `SOFT_MAX`, `FLASH_ATTN_EXT`, `ROPE` |
-| Embedding | `GET_ROWS`, `SET_ROWS`, `ADD_ID` |
-| 激活 | `GLU` (SwiGLU/GeGLU/ReGLU) |
-| MoE | `MUL_MAT_ID` |
-| 卷积 | `CONV_1D`, `CONV_2D`, `IM2COL` |
-| 状态空间 | `SSM_CONV`, `SSM_SCAN`, `RWKV_WKV6/7` |
-| 扩散 | `TIMESTEP_EMBEDDING`, `GLU` |
-| 自定义 | `CUSTOM`, `MAP_CUSTOM*` |
+### `type_traits[]`（`ggml.c` L621+）
 
-### 2.4 `struct ggml_cgraph`
+每种类型关联：
+
+| 字段 | 说明 |
+|------|------|
+| `blck_size` | block 元素数（32 或 256） |
+| `type_size` | 单 block 字节数 |
+| `is_quantized` | 是否量化 |
+| `to_float` | dequant 函数指针 |
+| `from_float_ref` | quant 参考实现指针 |
+
+## 5. `enum ggml_op`（88 种）
+
+### LLM 推理
+
+| 算子 | 用途 |
+|------|------|
+| `MUL_MAT` | 矩阵乘 |
+| `MUL_MAT_ID` | MoE |
+| `ROPE` | RoPE |
+| `RMS_NORM` / `LAYER_NORM` | 归一化 |
+| `SOFT_MAX` | Softmax |
+| `FLASH_ATTN_EXT` | Flash Attention |
+| `GET_ROWS` / `SET_ROWS` | Embedding |
+| `GLU` | SwiGLU 等（子类型见 `ggml_glu_op`） |
+| `RWKV_WKV6/7` | RWKV |
+| `SSM_CONV` / `SSM_SCAN` | Mamba |
+| `GATED_DELTA_NET` | DeltaNet |
+| `GATED_LINEAR_ATTN` | 门控线性注意力 |
+
+### 形状与数据
+
+`RESHAPE`, `VIEW`, `PERMUTE`, `TRANSPOSE`, `CONT`, `CPY`, `DUP`, `CONCAT`, `PAD`, `ROLL`
+
+### 训练
+
+`OPT_STEP_ADAMW`, `OPT_STEP_SGD`, `CROSS_ENTROPY_LOSS`, `build_backward_expand`
+
+### 辅助枚举
+
+- `ggml_unary_op`：22 种（SILU、GELU、TANH…）
+- `ggml_glu_op`：SWIGLU、GEGLU、REGLU、SWIGLU_OAI 等
+- `ggml_prec`：F32 精度 hint
+- `ggml_op_hint`：Hadamard 等
+
+## 6. `struct ggml_cgraph`（`ggml-impl.h` L329+）
 
 ```c
 struct ggml_cgraph {
-    int size;                // 容量
-    int n_nodes;             // 计算节点数
-    int n_leafs;             // 叶子节点（输入/权重）
-    struct ggml_tensor ** nodes;   // 拓扑排序的计算节点
-    struct ggml_tensor ** leafs;   // 输入和常量
-    struct ggml_tensor ** grads;    // 梯度（训练用）
+    int size, n_nodes, n_leafs;
+    struct ggml_tensor ** nodes;      // 计算节点（拓扑序）
+    struct ggml_tensor ** leafs;      // 常量/输入/权重
+    struct ggml_tensor ** grads;      // 梯度（训练）
+    struct ggml_tensor ** grad_accs;  // 梯度累加器
+    int32_t * use_counts;             // 引用计数（hash slot 索引）
     struct ggml_hash_set visited_hash_set;
     enum ggml_cgraph_eval_order order;
+    uint64_t uid;                     // 图唯一 ID（sched 复用检测）
 };
 ```
 
-### 2.5 `struct ggml_context`
+`use_counts`：每个 node 被后续节点引用的次数；归零时 gallocr 可 free 其输出 buffer。
+
+## 7. Context Bump Allocator
 
 ```c
+struct ggml_object {
+    size_t offs, size;
+    struct ggml_object * next;
+    enum ggml_object_type type;  // TENSOR / GRAPH / WORK_BUFFER
+};
+
 struct ggml_context {
     size_t mem_size;
     void * mem_buffer;
-    bool   mem_buffer_owned;
-    bool   no_alloc;
-    int    n_objects;
-    struct ggml_object * objects_begin;
-    struct ggml_object * objects_end;
+    bool mem_buffer_owned;
+    bool no_alloc;               // true: 不分配 tensor data
+    int n_objects;
+    struct ggml_object * objects_begin, * objects_end;
 };
 ```
 
-Context 是 **bump allocator**：所有 tensor/graph 元数据从 `mem_buffer` 顺序分配，不可单独释放。
+- `ggml_new_object()`：从 `mem_buffer` 顺序分配
+- `ggml_reset(ctx)`：重置对象链表，**不释放** mem_buffer
+- `no_alloc=true`：只建元数据；data 由 Backend/GGUF 后续绑定
 
----
+## 8. 关键 API
 
-## 3. 关键 API
-
-### 3.1 初始化
-
-| API | 说明 |
-|-----|------|
-| `ggml_init(params)` | 创建 Context，预分配 `mem_size` |
-| `ggml_free(ctx)` | 释放整个 Context |
+### 初始化
 
 ```c
 struct ggml_init_params params = {
     .mem_size   = 16*1024*1024,
-    .mem_buffer = NULL,  // NULL 则内部分配
+    .mem_buffer = NULL,
     .no_alloc   = false,
 };
 struct ggml_context * ctx = ggml_init(params);
+ggml_free(ctx);
 ```
 
-### 3.2 张量创建
+### 张量创建
 
 | API | 说明 |
 |-----|------|
-| `ggml_new_tensor_1d/2d/3d/4d` | 指定维度创建 |
-| `ggml_new_tensor` | 通用创建 |
-| `ggml_view_tensor` | 零拷贝 view |
-| `ggml_dup` | 复制张量 |
+| `ggml_new_tensor_1d/2d/3d/4d` | 指定维度 |
+| `ggml_new_tensor` | 通用 |
+| `ggml_view_tensor` / `ggml_view_*` | 零拷贝 view |
+| `ggml_cont` | 强制连续化 |
+| `ggml_dup` | 复制 |
 
-### 3.3 建图
+### 建图
 
 | API | 行号(约) | 说明 |
 |-----|----------|------|
-| `ggml_build_forward_impl` | L6964 | 递归构建前向图 |
-| `ggml_build_forward_expand` | L6998 | 追加节点到已有图 |
+| `ggml_visit_parents_graph` | L6920+ | DFS，维护 use_counts |
+| `ggml_build_forward_impl` | L6964 | 递归建前向图 |
+| `ggml_build_forward_expand` | L6997 | 追加到已有图 |
+| `ggml_build_forward_select` | L6983 | 多根图，仅 idx 分支 |
+| `ggml_build_backward_expand` | L7001 | 反向（训练） |
 | `ggml_new_graph` | L7133 | 创建空图 |
-| `ggml_graph_compute` | ggml-cpu.c L3308 | CPU 执行 |
+| `ggml_graph_view` | — | 子图 view |
+| `ggml_graph_compute` | `ggml-cpu.c` L3308 | CPU 执行 |
 
-### 3.4 LLM 常用算子
+### 量化辅助
+
+| API | 说明 |
+|-----|------|
+| `ggml_quantize_chunk()` | 统一量化入口 |
+| `ggml_quantize_requires_imatrix()` | IQ 系列强制 imatrix |
+| `ggml_quantize_init(type)` | 惰性初始化 codebook |
+
+## 9. LLM 常用算子示例
 
 ```c
-// 矩阵乘（Attention QK^T, FFN）
-struct ggml_tensor * ggml_mul_mat(ctx, a, b);
-
-// RoPE 位置编码
+struct ggml_tensor * ggml_mul_mat(ctx, w, x);
 struct ggml_tensor * ggml_rope(ctx, a, pos, n_dims, mode);
-
-// RMSNorm
 struct ggml_tensor * ggml_rms_norm(ctx, a, eps);
-
-// Flash Attention
 struct ggml_tensor * ggml_flash_attn_ext(ctx, q, k, v, mask, ...);
-
-// Embedding lookup
 struct ggml_tensor * ggml_get_rows(ctx, embd, tokens);
-
-// SwiGLU
-struct ggml_tensor * ggml_glu(ctx, a, b, type);  // type=SWIGLU
-
-// MoE 专家路由
-struct ggml_tensor * ggml_mul_mat_id(ctx, as, b, ids);
+struct ggml_tensor * ggml_glu(ctx, a, b, GGML_GLU_OP_SWIGLU);
+struct ggml_tensor * ggml_mul_mat_id(ctx, experts, x, ids);
 ```
 
----
-
-## 4. 建图与执行流程
+## 10. 建图与执行流程
 
 ```
-1. ggml_init()                         # 分配 Context
-2. 创建输入 tensor（weights, tokens）
-3. out = ggml_mul_mat(ctx, w, x)       # 只建图，不计算
+1. ggml_init()
+2. 创建 weight/input tensor（或 no_alloc + GGUF 绑定）
+3. out = ggml_mul_mat(ctx, w, x)       # 只建图
 4. gf = ggml_new_graph(ctx)
-5. ggml_build_forward_expand(gf, out)  # 拓扑排序
-6. 填充 input tensor data
-7. ggml_graph_compute(ctx, gf, n_threads)  # 或 Backend 路径
-8. 读取 output tensor data
+5. ggml_build_forward_expand(gf, out)  # 拓扑排序 + use_counts
+6. ggml_backend_sched_alloc_graph(sched, gf)
+7. 填充 input tensor data
+8. ggml_backend_sched_graph_compute_async(sched, gf)
+9. ggml_backend_sched_synchronize(sched)
+10. 读取 output tensor data
 ```
 
----
+## 11. In-Place 算子
 
-## 5. 张量 Flag
+`ggml_op_can_inplace()`（`ggml-alloc.c` L22-50）列出可原地执行的 op：
 
-| Flag | 含义 | 调度影响 |
-|------|------|----------|
-| `GGML_TENSOR_FLAG_INPUT` | 用户输入 | 默认落最后一个 Backend（通常 CPU） |
-| `GGML_TENSOR_FLAG_OUTPUT` | 输出节点 | gallocr 永不覆盖其内存 |
-| `GGML_TENSOR_FLAG_PARAM` | 可训练参数 | 优化器使用 |
-| `GGML_TENSOR_FLAG_LOSS` | 损失节点 | 反向传播起点 |
+ADD, MUL, SCALE, SOFT_MAX, ROPE, RMS_NORM, UNARY(SILU/GELU/…), GLU 等。
 
----
+gallocr 据此复用 parent buffer，降低峰值内存。
 
-## 6. `ggml.cpp`（26 行）
+## 12. 非显而易见细节
 
-仅注册 `std::terminate` 处理器：未捕获 C++ 异常时打印 backtrace（`GGML_NO_BACKTRACE` 可禁用）。**无张量逻辑**。
+1. **View 非连续**：`nb[]` 不规则时 GPU kernel 需特殊路径或 `ggml_cont`
+2. **4 维上限**：LLM 权重通常 `[rows, cols, 1, 1]`
+3. **反向传播**：llama.cpp 推理不用；ggml-opt 训练使用
+4. **`GGML_OP_NAME[]`**：调试用算子名称表（`ggml.c` L972+）
+5. **graph uid**：sched 检测图结构变化，决定 realloc
 
----
+## 相关文档
 
-## 7. 非显而易见细节
-
-1. **View 与 Contiguous**：`ggml_view_*` 共享底层 buffer；非连续 tensor 在 GPU kernel 中需特殊处理
-2. **In-place 算子**：`ggml_op_can_inplace()` 列出可原地执行的 op（ADD/MUL/ROPE/RMS_NORM 等），gallocr 据此复用内存
-3. **`no_alloc=true`**：Context 只建元数据不分配 tensor data；llama 加载 GGUF 时使用
-4. **4 维上限**：`GGML_MAX_DIMS=4`，LLM 权重通常 `[rows, cols, 1, 1]`
-5. **反向传播**：`ggml_build_backward_expand` 存在但 llama.cpp 推理不使用
-
----
-
-## 8. 扩展指南
-
-| 需求 | 修改位置 |
-|------|----------|
-| 新算子 | `ggml.h` 添加 enum + `ggml.c` 工厂函数 + 各 Backend 实现 |
-| 新数据类型 | `ggml_type` enum + `ggml-common.h` block 定义 + `ggml-quants.c` |
-| 调试建图 | 设置 `GGML_DEBUG` 环境变量打印图结构 |
-
----
-
-## 9. 相关文档
-
-- [04-backend-scheduler.md](./04-backend-scheduler.md) - 图如何分配到 Backend
-- [05-memory-alloc.md](./05-memory-alloc.md) - 图级内存生命周期
-- [06-quantization.md](./06-quantization.md) - 量化类型详解
+- [04-backend-scheduler.md](./04-backend-scheduler.md)
+- [05-memory-alloc.md](./05-memory-alloc.md)
+- [06-quantization.md](./06-quantization.md)

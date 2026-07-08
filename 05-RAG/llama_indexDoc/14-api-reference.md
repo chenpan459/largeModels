@@ -1,20 +1,40 @@
 # 14 - API 速查
 
+> **新手**：先完成 [02-五分钟第一个RAG.md](./00-小白入门/02-五分钟第一个RAG.md)，再用本文当字典查。
+
+## 小白最常用的 10 行
+
+```python
+from llama_index.core import Settings, VectorStoreIndex, SimpleDirectoryReader
+from llama_index.llms.openai_like import OpenAILike
+from llama_index.embeddings.openai_like import OpenAILikeEmbedding
+
+Settings.llm = OpenAILike(model="...", api_base="http://127.0.0.1:8080/v1",
+                          api_key="not-needed", is_chat_model=True)
+Settings.embed_model = OpenAILikeEmbedding(model_name="...", api_base="http://127.0.0.1:8081/v1",
+                                           api_key="not-needed")
+
+docs = SimpleDirectoryReader("./data", recursive=True).load_data()
+index = VectorStoreIndex.from_documents(docs)
+query_engine = index.as_query_engine(similarity_top_k=3)
+response = query_engine.query("问题")
+print(response.response)           # 答案字符串
+print(response.source_nodes)       # 引用来源
+```
+
+---
+
 ## 顶层导入（llama_index.core）
 
 ```python
 from llama_index.core import (
-    # 数据
     Document,
     Settings,
     StorageContext,
     load_index_from_storage,
-    # 索引
     VectorStoreIndex,
     SummaryIndex,
-    # 读取
     SimpleDirectoryReader,
-    # 响应
     PromptTemplate,
 )
 ```
