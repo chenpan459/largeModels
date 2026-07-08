@@ -2,6 +2,38 @@
 
 面向业务落地的 LLM 项目，与 `05-RAG/llama_index`（框架学习）互补。
 
+## OCR 项目：ocr
+
+路径：`/home/cp/work2/largeModels/07-业务应用/ocr`
+
+基于 **[baidu/Unlimited-OCR](https://huggingface.co/baidu/Unlimited-OCR)** 的文档解析：单图 / 多页 / PDF → 结构化文本，提供 CLI 与 Web API。
+
+```
+图片或 PDF
+    → Unlimited-OCR (Transformers)
+    → Markdown / 文本
+    → CLI 或 http://127.0.0.1:8010
+```
+
+| 项目 | 要求 |
+|------|------|
+| Python | 3.11+ |
+| GPU | 推荐 NVIDIA ≥ 8GB 显存 |
+| 磁盘 | ≥ 10 GB |
+
+```bash
+cd ~/work2/largeModels/07-业务应用/ocr
+python3.11 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export PYTHONPATH=.
+python -m app.cli image your.jpg
+python -m app.main   # Web 服务 :8010
+```
+
+详见 **[ocr/README.md](ocr/README.md)**。
+
+---
+
 ## 知识库项目：kefu-kb
 
 路径：`/home/cp/work2/largeModels/07-业务应用/kefu-kb`
@@ -201,6 +233,10 @@ docker compose up -d
 
 ```
 07-业务应用/
+├── ocr/                   # Unlimited-OCR 文档解析
+│   ├── app/               # CLI + FastAPI
+│   ├── static/            # Web UI
+│   └── outputs/           # OCR 结果
 └── kefu-kb/
     ├── app/                 # FastAPI 应用
     ├── config.yaml          # 部署配置（embedding / qdrant / llama）
@@ -218,9 +254,9 @@ docker compose up -d
 ## 学习路径
 
 ```
-03-推理部署 (llama-server)
+03-推理部署 (llama-server / vLLM)
     ↓
-07-业务应用 (kefu-kb 部署上线)
+07-业务应用 (ocr 文档解析 / kefu-kb 知识库)
     ↓
 05-RAG (LlamaIndex 深入)
 ```

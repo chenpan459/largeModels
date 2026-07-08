@@ -1,0 +1,42 @@
+# Unlimited-OCR 配置
+# 模型: https://huggingface.co/baidu/Unlimited-OCR
+
+model:
+  name: baidu/Unlimited-OCR
+  device: auto          # auto | cuda | cpu
+  dtype: bfloat16       # bfloat16 | float16 | float32
+  # 模型缓存放到 work2 盘（根分区 / 仅 ~2GB 空闲不够放 6GB 模型）
+  cache_dir: /home/cp/work2/largeModels/models/huggingface
+
+# 单张图片：gundam 适合复杂版面，base 适合整页
+single_image:
+  mode: gundam
+  prompt: "<image>document parsing."
+  base_size: 1024
+  image_size: 640       # gundam: 640, base: 1024
+  crop_mode: true       # gundam: true, base: false
+  max_length: 32768
+  no_repeat_ngram_size: 35
+  ngram_window: 128
+
+# 多页 / PDF：仅 base 模式
+multi_page:
+  prompt: "<image>Multi page parsing."
+  image_size: 1024
+  max_length: 32768
+  no_repeat_ngram_size: 35
+  ngram_window: 1024
+
+pdf:
+  dpi: 300
+
+output:
+  save_results: true
+
+paths:
+  output_dir: outputs
+  upload_dir: data/uploads
+
+server:
+  host: "0.0.0.0"
+  port: 8010

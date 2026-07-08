@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Unlimited OCR</title>
+  <style>
+    :root { font-family: system-ui, sans-serif; color: #1a1a1a; background: #f6f7f9; }
+    body { max-width: 960px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 1.5rem; margin-bottom: 8px; }
+    .sub { color: #666; margin-bottom: 24px; }
+    .card { background: #fff; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.08); margin-bottom: 16px; }
+    label { display: block; margin: 12px 0 6px; font-weight: 600; }
+    input[type=file], select { width: 100%; }
+    button { margin-top: 16px; padding: 10px 20px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; cursor: pointer; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 8px; min-height: 120px; }
+    .status { font-size: .9rem; color: #666; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Unlimited OCR</h1>
+  <p class="sub">基于 <a href="https://huggingface.co/baidu/Unlimited-OCR" target="_blank">baidu/Unlimited-OCR</a> 的文档解析</p>
+
+  <div class="card">
+    <label>任务类型</label>
+    <select id="task">
+      <option value="image">单张图片</option>
+      <option value="pdf">PDF 文档</option>
+      <option value="images">多张图片（多页）</option>
+    </select>
+
+    <label id="modeLabel">解析模式（仅单图）</label>
+    <select id="mode">
+      <option value="gundam">gundam — 复杂版面（crop）</option>
+      <option value="base">base — 整页</option>
+    </select>
+
+    <label>上传文件</label>
+    <input type="file" id="file" accept="image/*,.pdf" multiple />
+
+    <button id="run">开始 OCR</button>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="card">
+    <label>识别结果</label>
+    <pre id="out">等待上传...</pre>
+  </div>
+
+  <script>
+    const taskEl = document.getElementById('task');
+    const modeEl = document.getElementById('mode');
+    const modeLabel = document.getElementById('modeLabel');
+    const fileEl = document.getElementById('file');
+    const runBtn = document.getElementById('run');
+    const statusEl = document.getElementById('status');
+    const outEl = document.getElementById('out');
+
+    taskEl.addEventListener('change', () => {
+      const isImage = taskEl.value === 'image';
+      modeEl.style.display = isImage ? 'block' : 'none';
+      modeLabel.style.display = isImage ? 'block' : 'none';
+      fileEl.multiple = taskEl.value === 'images';
+      fileEl.accept = taskEl.value === 'pdf' ? '.pdf' : 'image/*';
+    });
+
+    runBtn.addEventListener('click', async () => {
+      const files = fileEl.files;
+      if (!files.length) {
+        statusEl.textContent = '请先选择文件';
+        return;
+      }
+      runBtn.disabled = true;
+      statusEl.textContent = '识别中，首次加载模型较慢...';
+      outEl.textContent = '';
+
+      const form = new FormData();
+      const task = taskEl.value;
+      let url = '/api/ocr/image';
+      if (task === 'pdf') {
+        url = '/api/ocr/pdf';
+        form.append('file', files[0]);
+      } else if (task === 'images') {
+        url = '/api/ocr/images';
+        for (const f of files) form.append('files', f);
+      } else {
+        form.append('file', files[0]);
+        form.append('mode', modeEl.value);
+      }
+
+      try {
+        const res = await fetch(url, { method: 'POST', body: form });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || res.statusText);
+        outEl.textContent = data.text || '(无文本输出，请查看 outputs 目录)';
+        statusEl.textContent = `完成，结果目录: ${data.output_dir}`;
+      } catch (e) {
+        statusEl.textContent = '失败: ' + e.message;
+        outEl.textContent = '';
+      } finally {
+        runBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
