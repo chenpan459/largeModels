@@ -783,9 +783,9 @@ class Runner:
 | CLI | `src/llamafactory/cli.py`, `src/llamafactory/launcher.py` |
 | 参数 | `src/llamafactory/hparams/parser.py`, `finetuning_args.py` |
 | 训练/导出 | `src/llamafactory/train/tuner.py`, `train/sft/workflow.py` |
-| 数据/模板 | `src/llamafactory/data/loader.py`, `data/template.py`, `data/data_utils.py` |
+| 数据/模板 | `src/llamafactory/data/loader.py`, `src/llamafactory/data/template.py`, `src/llamafactory/data/data_utils.py` |
 | 模型/adapter | `src/llamafactory/model/loader.py`, `model/adapter.py` |
 | 推理 | `src/llamafactory/chat/chat_model.py`, `chat/base_engine.py` |
 | HTTP | `src/llamafactory/api/app.py`, `api/chat.py`, `api/protocol.py`, `api/common.py` |
 | WebUI | `src/llamafactory/webui/interface.py`, `engine.py`, `manager.py`, `runner.py` |
-| 枚举 | `src/llamafactory/extras/constants.py`, `api/protocol.py`, `data/data_utils.py` |
+| 枚举 | `src/llamafactory/extras/constants.py`, `src/llamafactory/api/protocol.py`, `src/llamafactory/data/data_utils.py` |

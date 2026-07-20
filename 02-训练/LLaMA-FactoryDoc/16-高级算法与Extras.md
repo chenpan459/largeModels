@@ -115,13 +115,13 @@ BAdam 只更新部分参数，提供两种模式：
 
 ### 6.1 Muon
 
-`use_muon=true` 调 `_create_muon_optimizer()`，实现位于 `src/llamafactory/third_party/muon.py`：
+`use_muon=true` 调 `_create_muon_optimizer()`，实现位于 `src/llamafactory/third_party/muon/muon.py`：
 
 - 二维、且名称不含 `embed/lm_head` 的参数进入 Muon；
 - embedding、head、bias 等进入 AdamW 参数组；
 - 学习率、weight decay、Adam betas/epsilon 复用 TrainingArguments。
 
-示例：`examples/extras/muon/qwen2_full_sft.yaml`。Muon 是仓库内第三方实现，不需要 `requirements/muon.txt`。
+示例：`examples/extras/muon/qwen2_full_sft.yaml`。Muon 是仓库内第三方实现，不需要额外的 Muon requirements 文件。
 
 ### 6.2 Adam-mini
 
@@ -330,6 +330,6 @@ Transformer Engine：
 - Unsloth：`src/llamafactory/model/model_utils/unsloth.py`
 - Liger：`src/llamafactory/model/model_utils/liger_kernel.py`
 - FP8：`src/llamafactory/train/fp8_utils.py`
-- Muon：`src/llamafactory/third_party/muon.py`
+- Muon：`src/llamafactory/third_party/muon/muon.py`
 - 配置示例：`examples/extras/`
 - 可选依赖：`requirements/`
