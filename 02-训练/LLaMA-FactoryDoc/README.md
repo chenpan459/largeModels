@@ -8,38 +8,38 @@
 
 | 文档 | 说明 |
 |------|------|
-| [00-environment-setup.md](./00-environment-setup.md) | **环境搭建**：Python 3.11、虚拟环境、安装、排错 |
+| [00-环境搭建指南.md](./00-环境搭建指南.md) | **环境搭建**：Python 3.11、虚拟环境、安装、排错 |
 
 ### 概览与架构
 
 | 文档 | 说明 |
 |------|------|
-| [01-project-overview.md](./01-project-overview.md) | 项目定位、功能特性、技术栈 |
-| [02-architecture.md](./02-architecture.md) | 模块分层、依赖关系、v0/v1 双架构 |
+| [01-LLaMA-Factory项目概览.md](./01-LLaMA-Factory项目概览.md) | 项目定位、功能特性、技术栈 |
+| [02-架构设计.md](./02-架构设计.md) | 模块分层、依赖关系、v0/v1 双架构 |
 
 ### 入口与配置
 
 | 文档 | 说明 |
 |------|------|
-| [03-cli-entry.md](./03-cli-entry.md) | CLI 命令、入口脚本、分布式启动 |
-| [04-config-system.md](./04-config-system.md) | YAML 配置、hparams 参数体系 |
+| [03-CLI与入口.md](./03-CLI与入口.md) | CLI 命令、入口脚本、分布式启动 |
+| [04-配置系统.md](./04-配置系统.md) | YAML 配置、hparams 参数体系 |
 
 ### 核心模块
 
 | 文档 | 说明 |
 |------|------|
-| [05-training-pipeline.md](./05-training-pipeline.md) | 训练流程、各 stage 路由、回调 |
-| [06-data-module.md](./06-data-module.md) | 数据集加载、模板、处理器 |
-| [07-model-module.md](./07-model-module.md) | 模型加载、LoRA/量化、补丁 |
-| [08-inference-chat.md](./08-inference-chat.md) | ChatModel、推理引擎、API 服务 |
-| [09-webui.md](./09-webui.md) | LLaMA Board Gradio 界面 |
+| [05-训练流水线.md](./05-训练流水线.md) | 训练流程、各 stage 路由、回调 |
+| [06-数据模块.md](./06-数据模块.md) | 数据集加载、模板、处理器 |
+| [07-模型模块.md](./07-模型模块.md) | 模型加载、LoRA/量化、补丁 |
+| [08-推理与Chat.md](./08-推理与Chat.md) | ChatModel、推理引擎、API 服务 |
+| [09-Web-UI与LLaMA-Board.md](./09-Web-UI与LLaMA-Board.md) | LLaMA Board Gradio 界面 |
 
 ### 实践与参考
 
 | 文档 | 说明 |
 |------|------|
-| [10-usage-guide.md](./10-usage-guide.md) | 训练、导出、部署示例 |
-| [11-api-reference.md](./11-api-reference.md) | 关键函数与参数速查 |
+| [10-使用指南.md](./10-使用指南.md) | 训练、导出、部署示例 |
+| [11-API参考.md](./11-API参考.md) | 关键函数与参数速查 |
 
 ## 项目路径
 

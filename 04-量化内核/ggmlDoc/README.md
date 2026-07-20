@@ -16,36 +16,36 @@
 
 | 文档 | 说明 |
 |------|------|
-| [01-project-overview.md](./01-project-overview.md) | 目录结构、库拆分、42 类型、88 算子 |
-| [02-architecture.md](./02-architecture.md) | 分层架构、数据流、五层 Backend 接口 |
-| [03-tensor-graph.md](./03-tensor-graph.md) | ggml_tensor、cgraph、use_counts、建图 API |
+| [01-GGML项目总览.md](./01-GGML项目总览.md) | 目录结构、库拆分、42 类型、88 算子 |
+| [02-整体架构.md](./02-整体架构.md) | 分层架构、数据流、五层 Backend 接口 |
+| [03-张量模型与计算图.md](./03-张量模型与计算图.md) | ggml_tensor、cgraph、use_counts、建图 API |
 
 ### 核心模块
 
 | 文档 | 说明 |
 |------|------|
-| [04-backend-scheduler.md](./04-backend-scheduler.md) | sched 三 Pass、pipeline、async/event |
-| [05-memory-alloc.md](./05-memory-alloc.md) | gallocr、hash_node、in-place 生命周期 |
-| [06-quantization.md](./06-quantization.md) | block 格式、vec_dot 矩阵、repack、imatrix |
-| [07-gguf-format.md](./07-gguf-format.md) | v3 布局、多入口加载、写入 API |
+| [04-Backend抽象与调度器.md](./04-Backend抽象与调度器.md) | sched 三 Pass、pipeline、async/event |
+| [05-内存分配器.md](./05-内存分配器.md) | gallocr、hash_node、in-place 生命周期 |
+| [06-量化系统.md](./06-量化系统.md) | block 格式、vec_dot 矩阵、repack、imatrix |
+| [07-GGUF文件格式.md](./07-GGUF文件格式.md) | v3 布局、多入口加载、写入 API |
 
 ### 硬件 Backend
 
 | 文档 | 说明 |
 |------|------|
-| [08-backend-cpu.md](./08-backend-cpu.md) | ops.cpp、arch SIMD、AMX、extra buffer |
-| [09-backend-gpu.md](./09-backend-gpu.md) | CUDA 65 kernel 分类、Metal/Vulkan |
-| [10-other-backends.md](./10-other-backends.md) | SYCL/HIP/RPC/WebGPU/VirtGPU/CANN |
-| [15-metal-vulkan-deep.md](./15-metal-vulkan-deep.md) | **Metal 分层、Vulkan shader-gen** |
+| [08-CPU后端.md](./08-CPU后端.md) | ops.cpp、arch SIMD、AMX、extra buffer |
+| [09-GPU后端.md](./09-GPU后端.md) | CUDA 65 kernel 分类、Metal/Vulkan |
+| [10-其他后端.md](./10-其他后端.md) | SYCL/HIP/RPC/WebGPU/VirtGPU/CANN |
+| [15-Metal与Vulkan深度解析.md](./15-Metal与Vulkan深度解析.md) | **Metal 分层、Vulkan shader-gen** |
 
 ### 构建、API 与集成
 
 | 文档 | 说明 |
 |------|------|
-| [11-build-system.md](./11-build-system.md) | CMake 选项、GGML_SCHED_MAX_COPIES |
-| [12-api-reference.md](./12-api-reference.md) | API 速查、行号锚点 |
-| [13-llama-cpp-integration.md](./13-llama-cpp-integration.md) | llama 调用链、量化工具链 |
-| [14-ggml-opt-threading.md](./14-ggml-opt-threading.md) | **训练 opt、线程池** |
+| [11-构建系统.md](./11-构建系统.md) | CMake 选项、GGML_SCHED_MAX_COPIES |
+| [12-API参考与速查.md](./12-API参考与速查.md) | API 速查、行号锚点 |
+| [13-与llama.cpp集成.md](./13-与llama.cpp集成.md) | llama 调用链、量化工具链 |
+| [14-ggml-opt与线程系统.md](./14-ggml-opt与线程系统.md) | **训练 opt、线程池** |
 
 ## 项目路径
 
@@ -68,7 +68,7 @@ llama.cpp 内嵌副本：
 1. **入门**：01 → 02 → 03 → 12
 2. **推理内核**：04 → 05 → 06 → 07
 3. **性能**：08 → 09 → 15 → 11
-4. **llama 对照**：13 → `03-推理部署/llama.cppDoc/05-ggml.md`
+4. **llama 对照**：13 → `03-推理部署/llama.cppDoc/05-GGML计算引擎.md`
 5. **训练/线程**：14
 
 ## 快速开始

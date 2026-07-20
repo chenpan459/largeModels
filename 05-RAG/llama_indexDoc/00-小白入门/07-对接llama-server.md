@@ -108,7 +108,7 @@ Settings.llm = OpenAILike(
 )
 ```
 
-详见 `03-推理部署/vllmDoc/11-llama-cpp-integration.md`。
+详见 `03-推理部署/vllmDoc/11-与llama.cpp及kefu-kb对照.md`。
 
 ## 单进程 llama-server 同时 chat + embed
 
@@ -123,4 +123,4 @@ llama-server -m model.gguf --port 8080 --embedding
 ## 下一步
 
 → [08-常见报错与修复.md](./08-常见报错与修复.md)  
-→ 进阶：[13-llama-cpp-integration.md](../13-llama-cpp-integration.md)
+→ 进阶：[13-llama.cpp本地推理集成.md](../13-llama.cpp本地推理集成.md)

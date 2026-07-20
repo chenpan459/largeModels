@@ -14,29 +14,29 @@
 
 | 文档 | 说明 |
 |------|------|
-| [01-project-overview.md](./01-project-overview.md) | 目录结构、技术清单、依赖与运行方式 |
-| [02-learning-path.md](./02-learning-path.md) | 从 nanoGPT 到研究的模块关系与学习顺序 |
+| [01-BeyondNanoGPT项目总览.md](./01-BeyondNanoGPT项目总览.md) | 目录结构、技术清单、依赖与运行方式 |
+| [02-学习路径与模块关系.md](./02-学习路径与模块关系.md) | 从 nanoGPT 到研究的模块关系与学习顺序 |
 
 ### 核心专题
 
 | 文档 | 说明 |
 |------|------|
-| [03-language-models.md](./03-language-models.md) | Transformer、DataLoader、KV Cache、投机解码 |
-| [04-attention-variants.md](./04-attention-variants.md) | MHSA、GQA、Linear/MLA/Sparse Attention |
-| [05-architectures.md](./05-architectures.md) | ViT、MoE、Mamba、DiT、ResNet 等 |
-| [06-generative-models.md](./06-generative-models.md) | GAN、VAE、DDPM、Flow Matching |
-| [07-reinforcement-learning.md](./07-reinforcement-learning.md) | DQN→PPO→GRPO、Chess/AlphaZero |
-| [08-mlsys.md](./08-mlsys.md) | GPU 通信、DDP、TP、Triton Kernels |
-| [09-evals-rag.md](./09-evals-rag.md) | GSM8K、MMLU、SimpleQA、intro RAG |
-| [10-agents.md](./10-agents.md) | 搜索 Agent、Coding Agent（ReAct + Tools） |
+| [03-语言模型.md](./03-语言模型.md) | Transformer、DataLoader、KV Cache、投机解码 |
+| [04-Attention变体.md](./04-Attention变体.md) | MHSA、GQA、Linear/MLA/Sparse Attention |
+| [05-架构变体.md](./05-架构变体.md) | ViT、MoE、Mamba、DiT、ResNet 等 |
+| [06-生成式模型.md](./06-生成式模型.md) | GAN、VAE、DDPM、Flow Matching |
+| [07-强化学习.md](./07-强化学习.md) | DQN→PPO→GRPO、Chess/AlphaZero |
+| [08-ML系统.md](./08-ML系统.md) | GPU 通信、DDP、TP、Triton Kernels |
+| [09-评估与RAG.md](./09-评估与RAG.md) | GSM8K、MMLU、SimpleQA、intro RAG |
+| [10-Agent系统.md](./10-Agent系统.md) | 搜索 Agent、Coding Agent（ReAct + Tools） |
 
 ### 实践参考
 
 | 文档 | 说明 |
 |------|------|
-| [11-roadmap-and-gaps.md](./11-roadmap-and-gaps.md) | 已实现 vs 路线图 TODO |
-| [12-engineering-lessons.md](./12-engineering-lessons.md) | LESSONS.md 精华与工程模式 |
-| [13-quick-reference.md](./13-quick-reference.md) | 命令行、参数、文件速查 |
+| [11-路线图与实现缺口.md](./11-路线图与实现缺口.md) | 已实现 vs 路线图 TODO |
+| [12-工程经验.md](./12-工程经验.md) | LESSONS.md 精华与工程模式 |
+| [13-快速参考.md](./13-快速参考.md) | 命令行、参数、文件速查 |
 
 ## 项目路径
 

@@ -11,16 +11,16 @@
 
 | 文档 | 说明 |
 |------|------|
-| [01-project-overview](ggmlDoc/01-project-overview.md) | 项目总览 |
-| [02-architecture](ggmlDoc/02-architecture.md) | 分层架构 |
-| [03-tensor-graph](ggmlDoc/03-tensor-graph.md) | 张量与计算图 |
-| [04-backend-scheduler](ggmlDoc/04-backend-scheduler.md) | Backend 调度器 |
-| [05-memory-alloc](ggmlDoc/05-memory-alloc.md) | 内存分配器 |
-| [06-quantization](ggmlDoc/06-quantization.md) | 量化系统 |
-| [07-gguf-format](ggmlDoc/07-gguf-format.md) | GGUF 格式 |
-| [08-backend-cpu](ggmlDoc/08-backend-cpu.md) | CPU Backend |
-| [09-backend-gpu](ggmlDoc/09-backend-gpu.md) | CUDA/Metal/Vulkan |
-| [13-llama-cpp-integration](ggmlDoc/13-llama-cpp-integration.md) | 与 llama.cpp 集成 |
+| [01-project-overview](ggmlDoc/01-GGML项目总览.md) | 项目总览 |
+| [02-architecture](ggmlDoc/02-整体架构.md) | 分层架构 |
+| [03-tensor-graph](ggmlDoc/03-张量模型与计算图.md) | 张量与计算图 |
+| [04-backend-scheduler](ggmlDoc/04-Backend抽象与调度器.md) | Backend 调度器 |
+| [05-memory-alloc](ggmlDoc/05-内存分配器.md) | 内存分配器 |
+| [06-quantization](ggmlDoc/06-量化系统.md) | 量化系统 |
+| [07-gguf-format](ggmlDoc/07-GGUF文件格式.md) | GGUF 格式 |
+| [08-backend-cpu](ggmlDoc/08-CPU后端.md) | CPU Backend |
+| [09-backend-gpu](ggmlDoc/09-GPU后端.md) | CUDA/Metal/Vulkan |
+| [13-llama-cpp-integration](ggmlDoc/13-与llama.cpp集成.md) | 与 llama.cpp 集成 |
 
 **关联**: llama.cpp 内嵌副本在 `03-推理部署/llama.cpp/ggml/`，中文分析见 `03-推理部署/llama.cppDoc/`。
 

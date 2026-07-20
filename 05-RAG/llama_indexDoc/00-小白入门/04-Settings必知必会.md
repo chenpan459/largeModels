@@ -127,4 +127,4 @@ Settings.embed_model = MockEmbedding(embed_dim=384)
 ## 下一步
 
 → [05-读文档与切分.md](./05-读文档与切分.md)  
-→ 进阶：[04-settings-config.md](../04-settings-config.md)
+→ 进阶：[04-Settings配置机制.md](../04-Settings配置机制.md)

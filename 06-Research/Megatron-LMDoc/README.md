@@ -16,28 +16,28 @@
 
 | 文档 | 说明 |
 |------|------|
-| [01-project-overview.md](./01-project-overview.md) | 双组件结构、目录、版本 |
-| [02-architecture.md](./02-architecture.md) | 分层架构与训练数据流 |
+| [01-Megatron-LM项目总览.md](./01-Megatron-LM项目总览.md) | 双组件结构、目录、版本 |
+| [02-架构与训练数据流.md](./02-架构与训练数据流.md) | 分层架构与训练数据流 |
 
 ### 核心模块
 
 | 文档 | 说明 |
 |------|------|
-| [03-parallelism.md](./03-parallelism.md) | TP / PP / DP / EP / CP 五维并行 |
-| [04-megatron-core.md](./04-megatron-core.md) | Core 模块与 GPTModel |
-| [05-transformer-moe.md](./05-transformer-moe.md) | Transformer 层、MoE、MLA、MTP |
-| [06-training-loop.md](./06-training-loop.md) | pretrain / train_step / 调度 |
-| [07-data-checkpoint.md](./07-data-checkpoint.md) | 数据集、分布式 checkpoint |
-| [08-inference-rl.md](./08-inference-rl.md) | 推理、Megatron-RL |
-| [09-pretrain-gpt.md](./09-pretrain-gpt.md) | pretrain_gpt.py 精读 |
+| [03-并行策略.md](./03-并行策略.md) | TP / PP / DP / EP / CP 五维并行 |
+| [04-Megatron-Core模块.md](./04-Megatron-Core模块.md) | Core 模块与 GPTModel |
+| [05-Transformer与MoE高级架构.md](./05-Transformer与MoE高级架构.md) | Transformer 层、MoE、MLA、MTP |
+| [06-训练循环.md](./06-训练循环.md) | pretrain / train_step / 调度 |
+| [07-数据与Checkpoint.md](./07-数据与Checkpoint.md) | 数据集、分布式 checkpoint |
+| [08-推理与Megatron-RL.md](./08-推理与Megatron-RL.md) | 推理、Megatron-RL |
+| [09-pretrain_gpt.py精读.md](./09-pretrain_gpt.py精读.md) | pretrain_gpt.py 精读 |
 
 ### 实践与参考
 
 | 文档 | 说明 |
 |------|------|
-| [10-tools-examples.md](./10-tools-examples.md) | tools/、examples/、测试 |
-| [11-integration-guide.md](./11-integration-guide.md) | 与 beyond-nanogpt / Bridge 对照 |
-| [12-quick-reference.md](./12-quick-reference.md) | CLI 参数与路径速查 |
+| [10-工具示例与测试.md](./10-工具示例与测试.md) | tools/、examples/、测试 |
+| [11-与本仓库模块对照.md](./11-与本仓库模块对照.md) | 与 beyond-nanogpt / Bridge 对照 |
+| [12-快速参考.md](./12-快速参考.md) | CLI 参数与路径速查 |
 
 ## 项目路径
 
@@ -60,7 +60,7 @@
 2. **并行**：03 → 06
 3. **模型**：04 → 05
 4. **生产**：07 → 10
-5. **衔接**：11 → `beyond-nanogptDoc/08-mlsys.md` → Megatron Bridge
+5. **衔接**：11 → `beyond-nanogptDoc/08-ML系统.md` → Megatron Bridge
 
 ## 快速开始
 

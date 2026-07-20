@@ -95,4 +95,4 @@ kefu-kb 和 LlamaIndex **做的是同一类事**，只是 kefu-kb 手写流程�
 → [01-安装与环境.md](./01-安装与环境.md)：装 Python 包  
 → [02-五分钟第一个RAG.md](./02-五分钟第一个RAG.md)：跑通第一个完整例子
 
-进阶源码分析见上级目录 [01-project-overview.md](../01-project-overview.md)。
+进阶源码分析见上级目录 [01-LlamaIndex项目总览.md](../01-LlamaIndex项目总览.md)。
