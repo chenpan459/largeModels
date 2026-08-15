@@ -10,7 +10,7 @@
 - 参数行为以 dataclass、parser 校验和实际调用点为准；WebUI 与示例 YAML 只是配置入口。
 - 上游依赖（Transformers、TRL、PEFT、Accelerate）版本变化会改变兼容性，尤其是 PPO、FSDP2、FP8 与 v1。
 
-## 文档索引 00–16
+## 文档索引 00–17
 
 ### 入门、架构与配置
 
@@ -29,7 +29,7 @@
 | 05 | [训练流水线](./05-训练流水线.md) | `run_exp()`、stage 路由、workflow/Trainer |
 | 06 | [数据模块](./06-数据模块.md) | dataset info、converter、processor、collator、template |
 | 07 | [模型模块](./07-模型模块.md) | tokenizer/model loader、adapter、量化与 patch |
-| 08 | [推理与 Chat](./08-推理与Chat.md) | ChatModel、HF/vLLM/SGLang/KT 引擎、API |
+| 08 | [推理与 Chat](./08-推理与Chat.md) | ChatModel、HF/vLLM/SGLang 引擎、API |
 | 09 | [Web UI 与 LLaMA Board](./09-Web-UI与LLaMA-Board.md) | Gradio 组件、Runner 子进程、状态监控 |
 
 ### 实践、参考与专题
@@ -43,6 +43,7 @@
 | 14 | [v1 实验架构](./14-v1实验架构.md) | v1 CLI、core、plugin、trainer 与 v0 差异 |
 | 15 | [评测与工具脚本](./15-评测与工具脚本.md) | legacy eval、WebUI evaluation、NLG/统计/转换脚本 |
 | 16 | [高级算法与 Extras](./16-高级算法与Extras.md) | GaLore、APOLLO、BAdam、Muon、PiSSA、LoRA+、FP8、Liger、Unsloth |
+| 17 | [源码测验 100 题](./17-源码测验100题.md) | 概念/配置/调用链自测与参考答案 |
 
 ## 推荐阅读路径
 
@@ -96,7 +97,13 @@
 
 不要先从 v0 YAML 直接迁移；v1 是独立实现。
 
-### 7. 按问题查源码
+### 7. 源码自测
+
+```text
+通读 01–16 后 → 17 源码测验 100 题（先做题，再对答案）
+```
+
+### 8. 按问题查源码
 
 ```text
 命令没启动       → 03
